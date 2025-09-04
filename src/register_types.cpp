@@ -4,8 +4,10 @@
 #include <godot_cpp/core/defs.hpp>
 #include <godot_cpp/core/print_string.hpp>
 #include <godot_cpp/godot.hpp>
+#include <godot_cpp/core/class_db.hpp>
+#include <godot_cpp/classes/engine.hpp>
 
-#include "gdexample.h"
+#include "asset_loader.h"
 
 using namespace godot;
 
@@ -13,13 +15,19 @@ void initialize_bakje_extension_module(ModuleInitializationLevel p_level) {
   if (p_level != MODULE_INITIALIZATION_LEVEL_SCENE) {
     return;
   }
-  GDREGISTER_RUNTIME_CLASS(GDExample);
-
+  ClassDB::register_class<AssetLoader>();
+  auto* asset_loader = memnew(AssetLoader);
+  Engine::get_singleton()->register_singleton("AssetLoader", asset_loader);
 }
 
 void uninitialize_bakje_extension_module(ModuleInitializationLevel p_level) {
   if (p_level != MODULE_INITIALIZATION_LEVEL_SCENE) {
     return;
+  }
+  auto* asset_loader = AssetLoader::get_singleton();
+  if (asset_loader) {
+    Engine::get_singleton()->unregister_singleton("AssetLoader");
+    memdelete(asset_loader);
   }
 }
 

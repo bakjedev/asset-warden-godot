@@ -1,0 +1,13 @@
+[gd_scene load_steps=3 format=3 uid="uid://d3sqa18j1e1g6"]
+
+[ext_resource type="Script" uid="uid://cn7vq6ddw1qk8" path="res://test_loading.gd" id="1_gov4d"]
+[ext_resource type="Script" uid="uid://ladmsgbbfa28" path="res://csg_box_3d.gd" id="2_pg7vo"]
+
+[node name="Node3D" type="Node3D"]
+script = ExtResource("1_gov4d")
+
+[node name="CSGBox3D" type="CSGBox3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -5.85253)
+script = ExtResource("2_pg7vo")
+
+[node name="Camera3D" type="Camera3D" parent="."]
