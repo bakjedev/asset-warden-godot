@@ -4,6 +4,9 @@ import sys
 
 env = SConscript("godot-cpp/SConstruct")
 
+env.Tool("compilation_db")
+env.CompilationDatabase()
+
 # Create variant build directory
 env.VariantDir('build/src', 'src', duplicate=0)
 
