@@ -134,15 +134,12 @@ void AssetLoader::worker_thread_func() {
             ResourceLoader* loader = ResourceLoader::get_singleton();
             Ref<Resource> resource = loader->load(request.path, request.type_hint);
 
-            // Remove from active requests
             {
                 std::lock_guard<std::mutex> lock(queue_mutex);
                 active_requests.erase(request.request_id);
             }
 
-            // Call the callback directly on main thread using call_deferred
             if (request.callback.is_valid()) {
-                // This will execute on the main thread!
                 request.callback.call_deferred(resource, request.path,
                                                resource.is_valid() ? OK : ERR_FILE_NOT_FOUND);
             }

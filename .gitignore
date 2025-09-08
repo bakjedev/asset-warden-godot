@@ -14,5 +14,6 @@ build/
 bin/
 libs/
 obj/
+.cache/
 
 .sconsign.dblite
