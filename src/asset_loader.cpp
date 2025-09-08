@@ -39,7 +39,7 @@ void AssetLoader::_bind_methods() {
 AssetLoader::AssetLoader() : should_exit(false), next_request_id(1) {
     singleton = this;
 
-    initialize_worker_threads(2);
+    initialize_worker_threads(get_cpu_count() / 2);
 }
 
 AssetLoader::~AssetLoader() {

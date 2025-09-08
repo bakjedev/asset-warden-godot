@@ -1,8 +1,5 @@
 extends Node3D
 
-func _ready():
-	pass
-	AssetLoader.initialize_worker_threads(2)
 func _process(delta: float) -> void:
 	if Input.is_action_just_pressed("ui_accept"):
 		for i in range(10):
