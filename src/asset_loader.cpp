@@ -39,7 +39,9 @@ void AssetLoader::_bind_methods() {
 AssetLoader::AssetLoader() : should_exit(false), next_request_id(1) {
     singleton = this;
 
-    initialize_worker_threads(get_cpu_count() / 2);
+    const auto thread_count = get_cpu_count() / 2;
+    initialize_worker_threads(thread_count);
+    print_line(String("Initialized %d worker threads ") % static_cast<int64_t>(thread_count));
 }
 
 AssetLoader::~AssetLoader() {
