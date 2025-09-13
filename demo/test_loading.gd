@@ -2,9 +2,6 @@ extends Node3D
 
 func _process(delta: float) -> void:
 	if Input.is_action_just_pressed("ui_accept"):
-		for i in range(10):
-			var path = "res://textures/noise/texture_%d.png" % i
-			AssetLoader.load(path, _on_texture_loaded)
-
-func _on_texture_loaded(resource: Resource, path: String, error: int):
-	print("Loaded: ", path, " - Valid: ", resource != null, " - Error: ", error)
+		AssetLoader.wake_one()
+	if Input.is_action_just_pressed("ui_cancel"):
+		AssetLoader.shutdown()
