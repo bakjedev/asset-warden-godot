@@ -1,5 +1,9 @@
 #include "asset_loader.h"
+#include "godot_cpp/classes/global_constants.hpp"
+#include "godot_cpp/classes/resource.hpp"
+#include "godot_cpp/classes/resource_loader.hpp"
 #include "godot_cpp/core/class_db.hpp"
+#include "godot_cpp/core/mutex_lock.hpp"
 #include "godot_cpp/variant/callable.hpp"
 #include "godot_cpp/variant/utility_functions.hpp"
 
@@ -9,6 +13,10 @@ AssetLoader *AssetLoader::singleton = nullptr;
 
 void AssetLoader::initialize(int p_thread_count) {
 	shutdown();
+
+	_semaphore.instantiate();
+	_queue_mutex.instantiate();
+
 	for (int i = 0; i < p_thread_count; ++i) {
 		Ref<Thread> worker_thread;
 		worker_thread.instantiate();
@@ -17,8 +25,6 @@ void AssetLoader::initialize(int p_thread_count) {
 
 		_worker_threads.push_back(worker_thread);
 	}
-
-	_semaphore.instantiate();
 }
 
 void AssetLoader::shutdown() {
@@ -35,11 +41,34 @@ void AssetLoader::shutdown() {
 	}
 
 	_worker_threads.clear();
+
+	if (!_load_queue.empty() && _queue_mutex.is_valid()) {
+		MutexLock lock(*_queue_mutex.ptr());
+		while (!_load_queue.empty()) {
+			_load_queue.pop();
+			UtilityFunctions::print("POPPING LOAD QUEUE");
+		}
+	}
+
 	_should_exit = false;
+	_next_request_id = 1;
 }
 
 void AssetLoader::wake_one() {
 	_semaphore->post();
+}
+
+uint64_t AssetLoader::load(const String &p_path, const Callable &p_callback, Thread::Priority p_priority, const String &p_type_hint) {
+	LoadRequest request{ _next_request_id++, p_path, p_priority, p_type_hint, p_callback };
+
+	{
+		MutexLock lock(*_queue_mutex.ptr());
+		_load_queue.push(request);
+	}
+
+	_semaphore->post();
+
+	return request.id;
 }
 
 void AssetLoader::_bind_methods() {
@@ -49,10 +78,11 @@ void AssetLoader::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("initialize"), &AssetLoader::initialize);
 	ClassDB::bind_method(D_METHOD("shutdown"), &AssetLoader::shutdown);
 	ClassDB::bind_method(D_METHOD("wake_one"), &AssetLoader::wake_one);
+	ClassDB::bind_method(D_METHOD("load"), &AssetLoader::load);
 }
 
 AssetLoader::AssetLoader() :
-		_should_exit(false) {
+		_should_exit(false), _next_request_id(1) {
 	singleton = this;
 
 	initialize(2);
@@ -77,7 +107,27 @@ void AssetLoader::_worker_thread_func() {
 			break;
 		}
 
-		UtilityFunctions::print("s");
+		LoadRequest request;
+		bool has_request = false;
+
+		{
+			MutexLock lock(*_queue_mutex.ptr());
+
+			if (!_should_exit && !_load_queue.empty()) {
+				request = _load_queue.top();
+				_load_queue.pop();
+				has_request = true;
+			}
+		}
+
+		if (has_request) {
+			auto res = ResourceLoader::get_singleton()->load(request.path, request.type_hint);
+			//UtilityFunctions::print("Loaded ", request.path);
+
+			if (request.callback.is_valid()) {
+				request.callback.call_deferred(res, request.path, res.is_valid() ? OK : ERR_FILE_NOT_FOUND);
+			}
+		}
 	}
 
 	UtilityFunctions::print("Ending thread");
