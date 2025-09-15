@@ -50,7 +50,7 @@ private:
 
 	uint64_t _next_request_id;
 
-	void _worker_thread_func();
+	void _worker_thread_func(int p_index);
 };
 
 } // namespace godot

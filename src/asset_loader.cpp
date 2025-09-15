@@ -2,6 +2,7 @@
 #include "godot_cpp/classes/global_constants.hpp"
 #include "godot_cpp/classes/resource.hpp"
 #include "godot_cpp/classes/resource_loader.hpp"
+#include "godot_cpp/classes/thread.hpp"
 #include "godot_cpp/core/class_db.hpp"
 #include "godot_cpp/core/mutex_lock.hpp"
 #include "godot_cpp/variant/callable.hpp"
@@ -21,7 +22,7 @@ void AssetLoader::initialize(int p_thread_count) {
 		Ref<Thread> worker_thread;
 		worker_thread.instantiate();
 
-		worker_thread->start(Callable(this, "_worker_thread_func"));
+		worker_thread->start(Callable(this, "_worker_thread_func").bind(i));
 
 		_worker_threads.push_back(worker_thread);
 	}
@@ -97,7 +98,7 @@ AssetLoader *AssetLoader::get_singleton() {
 	return singleton;
 }
 
-void AssetLoader::_worker_thread_func() {
+void AssetLoader::_worker_thread_func(int p_index) {
 	UtilityFunctions::print("Starting thread");
 
 	while (!_should_exit) {
