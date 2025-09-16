@@ -7,7 +7,7 @@ func _ready():
 		"distribution": AssetLoader.DIST_CUSTOM,
 		"pools": [
 			{"type": "texture", "count": 5, "priority": Thread.PRIORITY_HIGH},
-			{"type": "mesh", "count": 5, "priority": Thread.PRIORITY_HIGH}
+			{"type": "mesh", "count": 5, "priority": Thread.PRIORITY_NORMAL}
 		]
 	})
 

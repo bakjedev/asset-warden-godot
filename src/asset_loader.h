@@ -34,12 +34,6 @@ public:
 		DIST_CUSTOM
 	};
 
-	struct ThreadPool {
-		String type;
-		int count;
-		Thread::Priority priority;
-	};
-
 	AssetLoader();
 	~AssetLoader();
 	static AssetLoader *get_singleton();
@@ -54,9 +48,6 @@ protected:
 	static void _bind_methods();
 
 private:
-	ThreadDistribution _distribution;
-	Vector<ThreadPool> _thread_pools;
-
 	Vector<Ref<Thread>> _worker_threads;
 	Ref<Semaphore> _semaphore;
 	std::atomic<bool> _should_exit;
@@ -68,6 +59,8 @@ private:
 	uint64_t _next_request_id;
 
 	void _worker_thread_func(const String &p_type);
+
+	void create_worker_thread(const String &p_type, Thread::Priority p_priority);
 };
 
 } // namespace godot

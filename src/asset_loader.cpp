@@ -22,45 +22,31 @@ void AssetLoader::initialize(const Dictionary &p_config) {
 	_semaphore.instantiate();
 	_queue_mutex.instantiate();
 
-	if (p_config.has("distribution")) {
-		_distribution = (ThreadDistribution)(int)p_config["distribution"];
-	}
-
-	if (p_config.has("pools")) {
-		Array pools = p_config["pools"];
-		for (int i = 0; i < pools.size(); ++i) {
-			Dictionary pool = pools[i];
-			_thread_pools.push_back(ThreadPool{ pool["type"], pool["count"], (Thread::Priority)(int)pool["priority"] });
-		}
-	}
-
 	auto core_count = OS::get_singleton()->get_processor_count();
 	auto available_cores = Math::max(1, core_count - 2);
 
-	switch (_distribution) {
-		case ThreadDistribution::DIST_EQUEL: {
-			for (int i = 0; i < available_cores; ++i) {
-				Ref<Thread> worker_thread;
-				worker_thread.instantiate();
+	if (p_config.has("distribution")) {
+		auto distribution = static_cast<ThreadDistribution>(static_cast<int>(p_config["distribution"]));
 
-				worker_thread->start(Callable(this, "_worker_thread_func").bind(""));
-
-				_worker_threads.push_back(worker_thread);
-			}
-			break;
-		}
-		case ThreadDistribution::DIST_CUSTOM: {
-			for (const auto &pool : _thread_pools) {
-				for (int j = 0; j < pool.count; ++j) {
-					Ref<Thread> worker_thread;
-					worker_thread.instantiate();
-
-					worker_thread->start(Callable(this, "_worker_thread_func").bind(pool.type), pool.priority);
-
-					_worker_threads.push_back(worker_thread);
+		switch (distribution) {
+			case DIST_EQUEL: {
+				for (int i = 0; i < available_cores; ++i) {
+					create_worker_thread("", Thread::PRIORITY_NORMAL);
 				}
+				break;
 			}
-			break;
+			case DIST_CUSTOM: {
+				if (p_config.has("pools")) {
+					Array pools = p_config["pools"];
+					for (int i = 0; i < pools.size(); ++i) {
+						Dictionary pool = pools[i];
+						for (int j = 0; j < static_cast<int>(pool["count"]); ++j) {
+							create_worker_thread(pool["type"], static_cast<Thread::Priority>(static_cast<int>(pool["priority"])));
+						}
+					}
+				}
+				break;
+			}
 		}
 	}
 }
@@ -125,7 +111,6 @@ void AssetLoader::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("shutdown"), &AssetLoader::shutdown);
 	ClassDB::bind_method(D_METHOD("wake_one"), &AssetLoader::wake_one);
 	ClassDB::bind_method(D_METHOD("load", "path", "callback", "priority", "type"), &AssetLoader::load);
-
 	BIND_ENUM_CONSTANT(DIST_EQUEL);
 	BIND_ENUM_CONSTANT(DIST_CUSTOM);
 }
@@ -160,14 +145,12 @@ void AssetLoader::_worker_thread_func(const String &p_type) {
 		{
 			MutexLock lock(*_queue_mutex.ptr());
 			if (!_asset_type_queues[p_type].empty()) {
-				UtilityFunctions::print("Found request on intended thread");
 				request = _asset_type_queues[p_type].top();
 				_asset_type_queues[p_type].pop();
 				has_request = true;
 			} else {
 				for (auto &load_queue : _asset_type_queues) {
 					if (!load_queue.value.empty()) {
-						UtilityFunctions::print("Stole request from other thread");
 						request = load_queue.value.top();
 						load_queue.value.pop();
 						has_request = true;
@@ -188,5 +171,12 @@ void AssetLoader::_worker_thread_func(const String &p_type) {
 	}
 
 	UtilityFunctions::print("Ending thread");
+}
+
+void AssetLoader::create_worker_thread(const String &p_type, Thread::Priority p_priority) {
+	Ref<Thread> worker_thread;
+	worker_thread.instantiate();
+	worker_thread->start(Callable(this, "_worker_thread_func").bind(p_type), p_priority);
+	_worker_threads.push_back(worker_thread);
 }
 } // namespace godot
