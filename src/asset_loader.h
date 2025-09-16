@@ -43,6 +43,7 @@ public:
 
 	void wake_one();
 	uint64_t load(const String &p_path, const Callable &p_callback = Callable(), Thread::Priority p_priority = Thread::Priority::PRIORITY_NORMAL, const String &p_type = "");
+	Array load_batch(const Array &p_paths, const Callable &p_callback = Callable(), Thread::Priority p_priority = Thread::Priority::PRIORITY_NORMAL, const String &p_type = "");
 
 protected:
 	static void _bind_methods();

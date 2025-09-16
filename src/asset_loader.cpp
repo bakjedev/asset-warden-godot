@@ -81,7 +81,7 @@ void AssetLoader::shutdown() {
 }
 
 void AssetLoader::wake_one() {
-	_semaphore->post();
+	_semaphore->post(1);
 }
 
 uint64_t AssetLoader::load(const String &p_path, const Callable &p_callback, Thread::Priority p_priority, const String &p_type) {
@@ -103,6 +103,31 @@ uint64_t AssetLoader::load(const String &p_path, const Callable &p_callback, Thr
 	return request.id;
 }
 
+Array AssetLoader::load_batch(const Array &p_paths, const Callable &p_callback, Thread::Priority p_priority, const String &p_type) {
+	Array request_ids;
+	request_ids.resize(p_paths.size());
+
+	{
+		MutexLock lock(*_queue_mutex.ptr());
+
+		for (int i = 0; i < p_paths.size(); ++i) {
+			LoadRequest request{ _next_request_id++, p_paths[i], p_priority, p_type, p_callback };
+
+			if (p_type == "texture") {
+				_asset_type_queues["texture"].push(request);
+			} else if (p_type == "mesh") {
+				_asset_type_queues["mesh"].push(request);
+			}
+
+			request_ids[i] = request.id;
+		}
+	}
+
+	_semaphore->post(p_paths.size());
+
+	return request_ids;
+}
+
 void AssetLoader::_bind_methods() {
 	ClassDB::bind_static_method("AssetLoader", D_METHOD("get_singleton"),
 			&AssetLoader::get_singleton);
@@ -111,6 +136,7 @@ void AssetLoader::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("shutdown"), &AssetLoader::shutdown);
 	ClassDB::bind_method(D_METHOD("wake_one"), &AssetLoader::wake_one);
 	ClassDB::bind_method(D_METHOD("load", "path", "callback", "priority", "type"), &AssetLoader::load);
+	ClassDB::bind_method(D_METHOD("load_batch", "paths", "callback", "priority", "type"), &AssetLoader::load_batch);
 	BIND_ENUM_CONSTANT(DIST_EQUEL);
 	BIND_ENUM_CONSTANT(DIST_CUSTOM);
 }
