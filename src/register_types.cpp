@@ -1,8 +1,7 @@
 #include "register_types.h"
 
 #include "asset_loader.h"
-#include "custom_window.h"
-#include "godot_cpp/classes/editor_plugin.hpp"
+#include "editor_panel.h"
 
 #include <godot_cpp/classes/engine.hpp>
 #include <godot_cpp/core/class_db.hpp>
@@ -30,8 +29,9 @@ void initialize_bakje_extension_module(ModuleInitializationLevel p_level) {
 			Engine::get_singleton()->register_singleton("AssetLoader", asset_loader_singleton);
 			break;
 		case MODULE_INITIALIZATION_LEVEL_EDITOR:
-			ClassDB::register_internal_class<CustomWindow>();
-			EditorPlugins::add_by_type<CustomWindow>();
+			ClassDB::register_internal_class<CustomDock>();
+			ClassDB::register_internal_class<EditorPanel>();
+			EditorPlugins::add_by_type<EditorPanel>();
 			break;
 		case MODULE_INITIALIZATION_LEVEL_MAX:
 			break;
