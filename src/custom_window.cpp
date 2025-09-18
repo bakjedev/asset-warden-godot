@@ -1,9 +1,13 @@
 // editor_plugin.cpp
 #include "custom_window.h"
 #include "godot_cpp/classes/editor_interface.hpp"
+#include "godot_cpp/classes/panel.hpp"
+#include "godot_cpp/classes/style_box_flat.hpp"
+#include "godot_cpp/variant/color_names.inc.hpp"
 #include <godot_cpp/classes/button.hpp>
 #include <godot_cpp/classes/label.hpp>
 #include <godot_cpp/classes/v_box_container.hpp>
+#include <godot_cpp/variant/color.hpp>
 #include <godot_cpp/variant/utility_functions.hpp>
 
 namespace godot {
@@ -27,17 +31,24 @@ void CustomWindow::_enter_tree() {
 	custom_window->set_title("testing");
 	custom_window->set_size(Vector2i(400, 300));
 
-	VBoxContainer *vbox = memnew(VBoxContainer);
-	custom_window->add_child(vbox);
+	Panel *background = memnew(Panel);
+	custom_window->add_child(background);
+
+	background->set_anchors_and_offsets_preset(Control::PRESET_FULL_RECT);
+
+	Ref<StyleBoxFlat> style = memnew(StyleBoxFlat);
+	style->set_bg_color(Color(1, 1, 1, 1));
+	background->add_theme_stylebox_override("panel", style);
 
 	Label *label = memnew(Label);
 	label->set_text("hi hello.");
-	vbox->add_child(label);
+	background->add_child(label);
 
 	Button *close_btn = memnew(Button);
 	close_btn->set_text("close");
+	close_btn->set_position({ 10, 100 });
 	close_btn->connect("pressed", callable_mp(custom_window, &Window::hide));
-	vbox->add_child(close_btn);
+	background->add_child(close_btn);
 
 	get_editor_interface()->get_base_control()->add_child(custom_window);
 	custom_window->hide();
