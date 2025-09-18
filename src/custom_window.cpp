@@ -23,37 +23,30 @@ CustomWindow::~CustomWindow() {
 }
 
 void CustomWindow::_enter_tree() {
-	// Create the window
 	custom_window = memnew(Window);
-	custom_window->set_title("My Custom Window");
+	custom_window->set_title("testing");
 	custom_window->set_size(Vector2i(400, 300));
 
-	// Create a container
 	VBoxContainer *vbox = memnew(VBoxContainer);
 	custom_window->add_child(vbox);
 
-	// Add some text
 	Label *label = memnew(Label);
-	label->set_text("Hello from C++ Extension!\nThis is my custom editor window.");
-	label->set_autowrap_mode(TextServer::AUTOWRAP_WORD_SMART);
+	label->set_text("hi hello.");
 	vbox->add_child(label);
 
-	// Add a button to close
 	Button *close_btn = memnew(Button);
-	close_btn->set_text("Close");
+	close_btn->set_text("close");
 	close_btn->connect("pressed", callable_mp(custom_window, &Window::hide));
 	vbox->add_child(close_btn);
 
-	// Add window to the editor
 	get_editor_interface()->get_base_control()->add_child(custom_window);
-	custom_window->hide(); // Start hidden
+	custom_window->hide();
 
-	// Add a menu item to show the window
-	add_tool_menu_item("Show My Window", callable_mp(this, &CustomWindow::show_custom_window));
+	add_tool_menu_item("assetloader menu", callable_mp(this, &CustomWindow::show_custom_window));
 }
 
 void CustomWindow::_exit_tree() {
-	remove_tool_menu_item("Show My Window");
+	remove_tool_menu_item("assetloader menu");
 	if (custom_window) {
 		custom_window->queue_free();
 		custom_window = nullptr;
