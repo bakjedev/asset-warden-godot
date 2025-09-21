@@ -1,22 +1,114 @@
-[gd_scene load_steps=6 format=3 uid="uid://d3sqa18j1e1g6"]
+[gd_scene load_steps=16 format=3 uid="uid://d3sqa18j1e1g6"]
 
 [ext_resource type="Script" uid="uid://cn7vq6ddw1qk8" path="res://test_loading.gd" id="1_gov4d"]
-[ext_resource type="Script" uid="uid://ladmsgbbfa28" path="res://csg_box_3d.gd" id="2_pg7vo"]
+[ext_resource type="Script" uid="uid://b3534uuutiqjc" path="res://test_blocks.gd" id="3_1l04a"]
+[ext_resource type="Script" uid="uid://qhxs5cgee5e0" path="res://spinning.gd" id="3_ecfth"]
 
-[sub_resource type="Gradient" id="Gradient_pg7vo"]
+[sub_resource type="Gradient" id="Gradient_ecfth"]
 
-[sub_resource type="GradientTexture1D" id="GradientTexture1D_1l04a"]
-gradient = SubResource("Gradient_pg7vo")
+[sub_resource type="GradientTexture1D" id="GradientTexture1D_wc73m"]
+gradient = SubResource("Gradient_ecfth")
 
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_pg7vo"]
-albedo_texture = SubResource("GradientTexture1D_1l04a")
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_1l04a"]
+albedo_color = Color(0.7529412, 0, 0, 1)
+albedo_texture = SubResource("GradientTexture1D_wc73m")
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_ecfth"]
+albedo_color = Color(0.7529412, 0, 0, 1)
+albedo_texture = SubResource("GradientTexture1D_wc73m")
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_wc73m"]
+albedo_color = Color(0.7529412, 0, 0, 1)
+albedo_texture = SubResource("GradientTexture1D_wc73m")
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_xvgud"]
+albedo_color = Color(0.7529412, 0, 0, 1)
+albedo_texture = SubResource("GradientTexture1D_wc73m")
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_ypwvy"]
+albedo_color = Color(0.7529412, 0, 0, 1)
+albedo_texture = SubResource("GradientTexture1D_wc73m")
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_m23s6"]
+albedo_color = Color(0.7529412, 0, 0, 1)
+albedo_texture = SubResource("GradientTexture1D_wc73m")
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_25ta2"]
+albedo_color = Color(0.7529412, 0, 0, 1)
+albedo_texture = SubResource("GradientTexture1D_wc73m")
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_vxij0"]
+albedo_color = Color(0.7529412, 0, 0, 1)
+albedo_texture = SubResource("GradientTexture1D_wc73m")
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_odase"]
+albedo_color = Color(0.7529412, 0, 0, 1)
+albedo_texture = SubResource("GradientTexture1D_wc73m")
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_aecca"]
+albedo_color = Color(0.7529412, 0, 0, 1)
+albedo_texture = SubResource("GradientTexture1D_wc73m")
 
 [node name="Node3D" type="Node3D"]
 script = ExtResource("1_gov4d")
 
-[node name="CSGBox3D" type="CSGBox3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -5.85253)
-material = SubResource("StandardMaterial3D_pg7vo")
-script = ExtResource("2_pg7vo")
-
 [node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.9043807, 0.42672658, 0, -0.42672658, 0.9043807, 0, 0, 0)
+
+[node name="TestBlocks" type="Node3D" parent="." node_paths=PackedStringArray("boxes")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.1669514, -2.3151326, -6.391304)
+script = ExtResource("3_1l04a")
+boxes = [NodePath("Box1"), NodePath("Box2"), NodePath("Box3"), NodePath("Box4"), NodePath("Box5"), NodePath("Box6"), NodePath("Box7"), NodePath("Box8"), NodePath("Box9"), NodePath("Box10")]
+
+[node name="Box1" type="CSGBox3D" parent="TestBlocks"]
+material = SubResource("StandardMaterial3D_1l04a")
+script = ExtResource("3_ecfth")
+
+[node name="Box2" type="CSGBox3D" parent="TestBlocks"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 2)
+material = SubResource("StandardMaterial3D_ecfth")
+script = ExtResource("3_ecfth")
+
+[node name="Box3" type="CSGBox3D" parent="TestBlocks"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 4)
+material = SubResource("StandardMaterial3D_wc73m")
+script = ExtResource("3_ecfth")
+
+[node name="Box4" type="CSGBox3D" parent="TestBlocks"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 0, 0)
+material = SubResource("StandardMaterial3D_xvgud")
+script = ExtResource("3_ecfth")
+
+[node name="Box5" type="CSGBox3D" parent="TestBlocks"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 0, 2)
+material = SubResource("StandardMaterial3D_ypwvy")
+script = ExtResource("3_ecfth")
+
+[node name="Box6" type="CSGBox3D" parent="TestBlocks"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 0, 4)
+material = SubResource("StandardMaterial3D_m23s6")
+script = ExtResource("3_ecfth")
+
+[node name="Box7" type="CSGBox3D" parent="TestBlocks"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4, 0, 0)
+material = SubResource("StandardMaterial3D_25ta2")
+script = ExtResource("3_ecfth")
+
+[node name="Box8" type="CSGBox3D" parent="TestBlocks"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4, 0, 2)
+material = SubResource("StandardMaterial3D_vxij0")
+script = ExtResource("3_ecfth")
+
+[node name="Box9" type="CSGBox3D" parent="TestBlocks"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4, 0, 4)
+material = SubResource("StandardMaterial3D_odase")
+script = ExtResource("3_ecfth")
+
+[node name="Box10" type="CSGBox3D" parent="TestBlocks"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6, 0, 2)
+material = SubResource("StandardMaterial3D_aecca")
+script = ExtResource("3_ecfth")
+
+[node name="OmniLight3D" type="OmniLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.32082868, 1.5468103, -4.391304)
+light_energy = 8.767
