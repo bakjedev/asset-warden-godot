@@ -37,11 +37,13 @@ public:
 	AssetLoader();
 	~AssetLoader();
 	static AssetLoader *get_singleton();
+	static void create_singlelton();
+	static void free_singleton();
 
 	void initialize(const Dictionary &p_config);
-	void shutdown();
 
-	void wake_one();
+	size_t request_count();
+
 	uint64_t load(const String &p_path, const Callable &p_callback = Callable(), Thread::Priority p_priority = Thread::Priority::PRIORITY_NORMAL, const String &p_type = "");
 	Array load_batch(const Array &p_paths, const Callable &p_callback = Callable(), Thread::Priority p_priority = Thread::Priority::PRIORITY_NORMAL, const String &p_type = "");
 
@@ -58,6 +60,8 @@ private:
 	Ref<Mutex> _queue_mutex;
 
 	uint64_t _next_request_id;
+
+	void shutdown();
 
 	void _worker_thread_func(const String &p_type);
 

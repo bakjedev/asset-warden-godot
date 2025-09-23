@@ -13,20 +13,16 @@
 
 using namespace godot;
 
-static AssetLoader *asset_loader_singleton = nullptr;
-
 void initialize_bakje_extension_module(ModuleInitializationLevel p_level) {
 	switch (p_level) {
 		case MODULE_INITIALIZATION_LEVEL_CORE:
-			// Register core classes here if needed
 			break;
 		case MODULE_INITIALIZATION_LEVEL_SERVERS:
-			// Register server classes here if needed
 			break;
 		case MODULE_INITIALIZATION_LEVEL_SCENE:
-			ClassDB::register_class<AssetLoader>();
-			asset_loader_singleton = memnew(AssetLoader);
-			Engine::get_singleton()->register_singleton("AssetLoader", asset_loader_singleton);
+			ClassDB::register_runtime_class<AssetLoader>();
+			AssetLoader::create_singleton();
+			Engine::get_singleton()->register_singleton("AssetLoader", AssetLoader::get_singleton());
 			break;
 		case MODULE_INITIALIZATION_LEVEL_EDITOR:
 			ClassDB::register_internal_class<CustomDock>();
@@ -46,10 +42,7 @@ void uninitialize_bakje_extension_module(ModuleInitializationLevel p_level) {
 			break;
 		case MODULE_INITIALIZATION_LEVEL_SCENE:
 			Engine::get_singleton()->unregister_singleton("AssetLoader");
-			if (asset_loader_singleton) {
-				memdelete(asset_loader_singleton);
-				asset_loader_singleton = nullptr;
-			}
+			AssetLoader::free_singleton();
 			break;
 		case MODULE_INITIALIZATION_LEVEL_EDITOR:
 			break;

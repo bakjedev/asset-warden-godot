@@ -1,7 +1,9 @@
 // editor_plugin.cpp
 #include "editor_panel.h"
+#include "asset_loader.h"
 #include "godot_cpp/classes/editor_interface.hpp"
 #include <godot_cpp/classes/button.hpp>
+#include <godot_cpp/classes/engine.hpp>
 #include <godot_cpp/classes/label.hpp>
 #include <godot_cpp/classes/resource_loader.hpp>
 #include <godot_cpp/classes/v_box_container.hpp>
@@ -16,8 +18,9 @@ CustomDock::CustomDock() {
 	add_child(_vbox);
 
 	_label = memnew(Label);
-	_label->set_text("i love docking");
+	_label->set_text("Request count: 0");
 	_vbox->add_child(_label);
+	set_physics_process(true);
 }
 
 CustomDock::~CustomDock() {
@@ -27,6 +30,14 @@ CustomDock::~CustomDock() {
 
 	if (_label) {
 		_label->queue_free();
+	}
+}
+
+void CustomDock::_physics_process(double) {
+	//auto asset_loader = AssetLoader::get_singleton();
+	auto asset_loader = Object::cast_to<AssetLoader>(Engine::get_singleton()->get_singleton("AssetLoader"));
+	if (_label && asset_loader) {
+		_label->set_text("Request csssount: " + String::num(asset_loader->request_count()));
 	}
 }
 

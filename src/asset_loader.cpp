@@ -21,6 +21,7 @@ void AssetLoader::initialize(const Dictionary &p_config) {
 
 	_semaphore.instantiate();
 	_queue_mutex.instantiate();
+	UtilityFunctions::print("Created queue mutex");
 
 	auto core_count = OS::get_singleton()->get_processor_count();
 	auto available_cores = Math::max(1, core_count - 2);
@@ -51,6 +52,25 @@ void AssetLoader::initialize(const Dictionary &p_config) {
 	}
 }
 
+size_t AssetLoader::request_count() {
+	size_t count = 0;
+	if (!_queue_mutex.is_valid()) {
+		UtilityFunctions::print("INVALID");
+		return count;
+	}
+	{
+		MutexLock lock(*_queue_mutex.ptr());
+		if (_asset_type_queues.size() > 0) {
+			UtilityFunctions::print("queues: " + String::num(_asset_type_queues.size()));
+		}
+		for (auto &queue : _asset_type_queues) {
+			count += queue.value.size();
+		}
+	}
+	UtilityFunctions::print("finalcount: " + String::num(count));
+	return count;
+}
+
 void AssetLoader::shutdown() {
 	_should_exit = true;
 
@@ -78,10 +98,6 @@ void AssetLoader::shutdown() {
 
 	_should_exit = false;
 	_next_request_id = 1;
-}
-
-void AssetLoader::wake_one() {
-	_semaphore->post(1);
 }
 
 uint64_t AssetLoader::load(const String &p_path, const Callable &p_callback, Thread::Priority p_priority, const String &p_type) {
@@ -123,7 +139,8 @@ Array AssetLoader::load_batch(const Array &p_paths, const Callable &p_callback, 
 		}
 	}
 
-	_semaphore->post(p_paths.size());
+	//_semaphore->post(p_paths.size());
+	UtilityFunctions::print("batch posted ", _asset_type_queues["texture"].size());
 
 	return request_ids;
 }
@@ -133,8 +150,6 @@ void AssetLoader::_bind_methods() {
 			&AssetLoader::get_singleton);
 	ClassDB::bind_method(D_METHOD("_worker_thread_func"), &AssetLoader::_worker_thread_func);
 	ClassDB::bind_method(D_METHOD("initialize", "config"), &AssetLoader::initialize);
-	ClassDB::bind_method(D_METHOD("shutdown"), &AssetLoader::shutdown);
-	ClassDB::bind_method(D_METHOD("wake_one"), &AssetLoader::wake_one);
 	ClassDB::bind_method(D_METHOD("load", "path", "callback", "priority", "type"), &AssetLoader::load);
 	ClassDB::bind_method(D_METHOD("load_batch", "paths", "callback", "priority", "type"), &AssetLoader::load_batch);
 	BIND_ENUM_CONSTANT(DIST_EQUEL);
@@ -143,16 +158,31 @@ void AssetLoader::_bind_methods() {
 
 AssetLoader::AssetLoader() :
 		_should_exit(false), _next_request_id(1) {
-	singleton = this;
 }
 
 AssetLoader::~AssetLoader() {
-	singleton = nullptr;
 	shutdown();
 }
 
 AssetLoader *AssetLoader::get_singleton() {
 	return singleton;
+}
+
+void AssetLoader::create_singleton() {
+	if (singleton != nullptr) {
+		return;
+	}
+	singleton = memnew(AssetLoader);
+	UtilityFunctions::print("Allocated singleton");
+}
+
+void AssetLoader::free_singleton() {
+	if (singleton == nullptr) {
+		return;
+	}
+	memdelete(singleton);
+	singleton = nullptr;
+	UtilityFunctions::print("Freed singleton");
 }
 
 void AssetLoader::_worker_thread_func(const String &p_type) {

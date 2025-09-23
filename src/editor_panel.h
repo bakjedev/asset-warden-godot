@@ -20,6 +20,8 @@ protected:
 public:
 	CustomDock();
 	~CustomDock();
+
+	virtual void _physics_process(double delta) override;
 };
 
 class EditorPanel : public EditorPlugin {
