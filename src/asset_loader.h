@@ -1,4 +1,5 @@
 #pragma once
+#include "godot_cpp/classes/ref_counted.hpp"
 #include "godot_cpp/variant/callable.hpp"
 #include "godot_cpp/variant/dictionary.hpp"
 #include <godot_cpp/classes/mutex.hpp>
@@ -11,8 +12,8 @@
 
 namespace godot {
 
-class AssetLoader : public Object {
-	GDCLASS(AssetLoader, Object)
+class AssetLoader : public RefCounted {
+	GDCLASS(AssetLoader, RefCounted)
 
 	static AssetLoader *singleton;
 
@@ -37,8 +38,6 @@ public:
 	AssetLoader();
 	~AssetLoader();
 	static AssetLoader *get_singleton();
-	static void create_singlelton();
-	static void free_singleton();
 
 	void initialize(const Dictionary &p_config);
 

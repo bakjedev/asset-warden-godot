@@ -3,6 +3,7 @@ extends Node3D
 @export var boxes: Array[Node] = []
 
 func _ready():
+	print("GDScript AssetLoader instance: ", AssetLoader.get_instance_id())
 	AssetLoader.initialize({
 		"distribution": AssetLoader.DIST_CUSTOM,
 		"pools": [

@@ -21,6 +21,7 @@ public:
 	CustomDock();
 	~CustomDock();
 
+	virtual void _ready() override;
 	virtual void _physics_process(double delta) override;
 };
 

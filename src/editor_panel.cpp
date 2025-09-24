@@ -33,11 +33,14 @@ CustomDock::~CustomDock() {
 	}
 }
 
+void CustomDock::_ready() {
+	auto asset_loader = AssetLoader::get_singleton();
+	UtilityFunctions::print("Custom dock _ready asset loader: " + String::num((int64_t)asset_loader));
+}
+
 void CustomDock::_physics_process(double) {
-	//auto asset_loader = AssetLoader::get_singleton();
-	auto asset_loader = Object::cast_to<AssetLoader>(Engine::get_singleton()->get_singleton("AssetLoader"));
-	if (_label && asset_loader) {
-		_label->set_text("Request csssount: " + String::num(asset_loader->request_count()));
+	if (_label) {
+		_label->set_text("Request csssount: ");
 	}
 }
 

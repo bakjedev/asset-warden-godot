@@ -1,10 +1,12 @@
 #include "asset_loader.h"
+#include "godot_cpp/classes/engine.hpp"
 #include "godot_cpp/classes/global_constants.hpp"
 #include "godot_cpp/classes/os.hpp"
 #include "godot_cpp/classes/resource.hpp"
 #include "godot_cpp/classes/resource_loader.hpp"
 #include "godot_cpp/classes/thread.hpp"
 #include "godot_cpp/core/class_db.hpp"
+#include "godot_cpp/core/error_macros.hpp"
 #include "godot_cpp/core/mutex_lock.hpp"
 #include "godot_cpp/variant/callable.hpp"
 #include "godot_cpp/variant/dictionary.hpp"
@@ -12,7 +14,7 @@
 #include <cstdint>
 #include <queue>
 
-namespace godot {
+using namespace godot;
 
 AssetLoader *AssetLoader::singleton = nullptr;
 
@@ -55,9 +57,9 @@ void AssetLoader::initialize(const Dictionary &p_config) {
 size_t AssetLoader::request_count() {
 	size_t count = 0;
 	if (!_queue_mutex.is_valid()) {
-		UtilityFunctions::print("INVALID");
 		return count;
 	}
+	UtilityFunctions::print("We made it");
 	{
 		MutexLock lock(*_queue_mutex.ptr());
 		if (_asset_type_queues.size() > 0) {
@@ -75,7 +77,9 @@ void AssetLoader::shutdown() {
 	_should_exit = true;
 
 	if (_semaphore.is_valid()) {
-		_semaphore->post(_worker_threads.size());
+		for (int i = 0; i < _worker_threads.size(); ++i) {
+			_semaphore->post();
+		}
 	}
 
 	for (auto wt : _worker_threads) {
@@ -140,6 +144,11 @@ Array AssetLoader::load_batch(const Array &p_paths, const Callable &p_callback, 
 	}
 
 	//_semaphore->post(p_paths.size());
+	auto *singleton1 = AssetLoader::get_singleton();
+	auto *singleton2 = Object::cast_to<AssetLoader>(Engine::get_singleton()->get_singleton("AssetLoader"));
+	UtilityFunctions::print("Direct singleton: " + String::num((int64_t)singleton1, 0));
+	UtilityFunctions::print("Engine singleton: " + String::num((int64_t)singleton2, 0));
+
 	UtilityFunctions::print("batch posted ", _asset_type_queues["texture"].size());
 
 	return request_ids;
@@ -158,31 +167,20 @@ void AssetLoader::_bind_methods() {
 
 AssetLoader::AssetLoader() :
 		_should_exit(false), _next_request_id(1) {
+	UtilityFunctions::print("AssetLoader constructor called, this = " + String::num((int64_t)this, 0));
+
+	ERR_FAIL_COND(singleton != nullptr);
+	singleton = this;
 }
 
 AssetLoader::~AssetLoader() {
+	ERR_FAIL_COND(singleton != this);
+	singleton = nullptr;
 	shutdown();
 }
 
 AssetLoader *AssetLoader::get_singleton() {
 	return singleton;
-}
-
-void AssetLoader::create_singleton() {
-	if (singleton != nullptr) {
-		return;
-	}
-	singleton = memnew(AssetLoader);
-	UtilityFunctions::print("Allocated singleton");
-}
-
-void AssetLoader::free_singleton() {
-	if (singleton == nullptr) {
-		return;
-	}
-	memdelete(singleton);
-	singleton = nullptr;
-	UtilityFunctions::print("Freed singleton");
 }
 
 void AssetLoader::_worker_thread_func(const String &p_type) {
@@ -235,4 +233,3 @@ void AssetLoader::create_worker_thread(const String &p_type, Thread::Priority p_
 	worker_thread->start(Callable(this, "_worker_thread_func").bind(p_type), p_priority);
 	_worker_threads.push_back(worker_thread);
 }
-} // namespace godot

@@ -10,53 +10,53 @@
 gradient = SubResource("Gradient_ecfth")
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_1l04a"]
-albedo_color = Color(0.7529412, 0, 0, 1)
+albedo_color = Color(0.752941, 0, 0, 1)
 albedo_texture = SubResource("GradientTexture1D_wc73m")
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_ecfth"]
-albedo_color = Color(0.7529412, 0, 0, 1)
+albedo_color = Color(0.752941, 0, 0, 1)
 albedo_texture = SubResource("GradientTexture1D_wc73m")
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_wc73m"]
-albedo_color = Color(0.7529412, 0, 0, 1)
+albedo_color = Color(0.752941, 0, 0, 1)
 albedo_texture = SubResource("GradientTexture1D_wc73m")
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_xvgud"]
-albedo_color = Color(0.7529412, 0, 0, 1)
+albedo_color = Color(0.752941, 0, 0, 1)
 albedo_texture = SubResource("GradientTexture1D_wc73m")
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_ypwvy"]
-albedo_color = Color(0.7529412, 0, 0, 1)
+albedo_color = Color(0.752941, 0, 0, 1)
 albedo_texture = SubResource("GradientTexture1D_wc73m")
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_m23s6"]
-albedo_color = Color(0.7529412, 0, 0, 1)
+albedo_color = Color(0.752941, 0, 0, 1)
 albedo_texture = SubResource("GradientTexture1D_wc73m")
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_25ta2"]
-albedo_color = Color(0.7529412, 0, 0, 1)
+albedo_color = Color(0.752941, 0, 0, 1)
 albedo_texture = SubResource("GradientTexture1D_wc73m")
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_vxij0"]
-albedo_color = Color(0.7529412, 0, 0, 1)
+albedo_color = Color(0.752941, 0, 0, 1)
 albedo_texture = SubResource("GradientTexture1D_wc73m")
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_odase"]
-albedo_color = Color(0.7529412, 0, 0, 1)
+albedo_color = Color(0.752941, 0, 0, 1)
 albedo_texture = SubResource("GradientTexture1D_wc73m")
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_aecca"]
-albedo_color = Color(0.7529412, 0, 0, 1)
+albedo_color = Color(0.752941, 0, 0, 1)
 albedo_texture = SubResource("GradientTexture1D_wc73m")
 
 [node name="Node3D" type="Node3D"]
 script = ExtResource("1_gov4d")
 
 [node name="Camera3D" type="Camera3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 0.9043807, 0.42672658, 0, -0.42672658, 0.9043807, 0, 0, 0)
+transform = Transform3D(1, 0, 0, 0, 0.904381, 0.426727, 0, -0.426727, 0.904381, 0, 0, 0)
 
 [node name="TestBlocks" type="Node3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.1669514, -2.3151326, -6.391304)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.16695, -2.31513, -6.3913)
 script = ExtResource("3_1l04a")
 
 [node name="Box1" type="CSGBox3D" parent="TestBlocks"]
@@ -109,5 +109,5 @@ material = SubResource("StandardMaterial3D_aecca")
 script = ExtResource("3_ecfth")
 
 [node name="OmniLight3D" type="OmniLight3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.32082868, 1.5468103, -4.391304)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.320829, 1.54681, -4.3913)
 light_energy = 8.767

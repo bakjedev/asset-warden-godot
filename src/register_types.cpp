@@ -2,16 +2,18 @@
 
 #include "asset_loader.h"
 #include "editor_panel.h"
+#include "godot_cpp/core/memory.hpp"
 
 #include <godot_cpp/classes/engine.hpp>
 #include <godot_cpp/core/class_db.hpp>
 #include <godot_cpp/core/defs.hpp>
-#include <godot_cpp/core/print_string.hpp>
 #include <godot_cpp/godot.hpp>
 
 #include <gdextension_interface.h>
 
 using namespace godot;
+
+static AssetLoader *asset_loader_singleton;
 
 void initialize_bakje_extension_module(ModuleInitializationLevel p_level) {
 	switch (p_level) {
@@ -20,8 +22,8 @@ void initialize_bakje_extension_module(ModuleInitializationLevel p_level) {
 		case MODULE_INITIALIZATION_LEVEL_SERVERS:
 			break;
 		case MODULE_INITIALIZATION_LEVEL_SCENE:
-			ClassDB::register_runtime_class<AssetLoader>();
-			AssetLoader::create_singleton();
+			ClassDB::register_class<AssetLoader>();
+			asset_loader_singleton = memnew(AssetLoader);
 			Engine::get_singleton()->register_singleton("AssetLoader", AssetLoader::get_singleton());
 			break;
 		case MODULE_INITIALIZATION_LEVEL_EDITOR:
@@ -42,7 +44,7 @@ void uninitialize_bakje_extension_module(ModuleInitializationLevel p_level) {
 			break;
 		case MODULE_INITIALIZATION_LEVEL_SCENE:
 			Engine::get_singleton()->unregister_singleton("AssetLoader");
-			AssetLoader::free_singleton();
+			memdelete(asset_loader_singleton);
 			break;
 		case MODULE_INITIALIZATION_LEVEL_EDITOR:
 			break;
