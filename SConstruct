@@ -7,7 +7,9 @@ env = SConscript("godot-cpp/SConstruct")
 
 env.Append(CPPPATH=["src/"])
 
-sources = Glob("src/*.cpp")
+env.VariantDir('build/src', 'src', duplicate=0)
+
+sources = Glob("build/src/*.cpp")
 
 folder = "demo/addons/bakje-extension"
 
