@@ -77,9 +77,7 @@ void AssetLoader::shutdown() {
 	_should_exit = true;
 
 	if (_semaphore.is_valid()) {
-		for (int i = 0; i < _worker_threads.size(); ++i) {
-			_semaphore->post();
-		}
+		_semaphore->post(_worker_threads.size());
 	}
 
 	for (auto wt : _worker_threads) {
@@ -143,13 +141,7 @@ Array AssetLoader::load_batch(const Array &p_paths, const Callable &p_callback, 
 		}
 	}
 
-	//_semaphore->post(p_paths.size());
-	auto *singleton1 = AssetLoader::get_singleton();
-	auto *singleton2 = Object::cast_to<AssetLoader>(Engine::get_singleton()->get_singleton("AssetLoader"));
-	UtilityFunctions::print("Direct singleton: " + String::num((int64_t)singleton1, 0));
-	UtilityFunctions::print("Engine singleton: " + String::num((int64_t)singleton2, 0));
-
-	UtilityFunctions::print("batch posted ", _asset_type_queues["texture"].size());
+	_semaphore->post(p_paths.size());
 
 	return request_ids;
 }

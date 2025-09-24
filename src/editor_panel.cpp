@@ -35,12 +35,14 @@ CustomDock::~CustomDock() {
 
 void CustomDock::_ready() {
 	auto asset_loader = AssetLoader::get_singleton();
-	UtilityFunctions::print("Custom dock _ready asset loader: " + String::num((int64_t)asset_loader));
+	godot::String addr_str = godot::String::num_uint64((uint64_t)asset_loader, 16); // hex
+	godot::UtilityFunctions::print("Pointer address (hex): 0x", addr_str);
 }
 
 void CustomDock::_physics_process(double) {
-	if (_label) {
-		_label->set_text("Request csssount: ");
+	auto asset_loader = AssetLoader::get_singleton();
+	if (_label && asset_loader) {
+		_label->set_text("Request csssount: " + String::num(asset_loader->request_count()));
 	}
 }
 
