@@ -1,8 +1,8 @@
 [gd_scene load_steps=16 format=3 uid="uid://d3sqa18j1e1g6"]
 
-[ext_resource type="Script" uid="uid://cn7vq6ddw1qk8" path="res://test_loading.gd" id="1_gov4d"]
-[ext_resource type="Script" uid="uid://b3534uuutiqjc" path="res://test_blocks.gd" id="3_1l04a"]
-[ext_resource type="Script" uid="uid://qhxs5cgee5e0" path="res://spinning.gd" id="3_ecfth"]
+[ext_resource type="Script" path="res://test_loading.gd" id="1_gov4d"]
+[ext_resource type="Script" path="res://test_blocks.gd" id="3_1l04a"]
+[ext_resource type="Script" path="res://spinning.gd" id="3_ecfth"]
 
 [sub_resource type="Gradient" id="Gradient_ecfth"]
 
