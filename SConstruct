@@ -13,6 +13,9 @@ sources = Glob("build/src/*.cpp")
 
 folder = "demo/addons/bakje-extension"
 
+if not os.path.isdir(folder):
+	os.makedirs(folder, exist_ok=True)
+
 for filename in os.listdir(folder):
 	file_path = os.path.join(folder, filename)
 	if os.path.isfile(file_path):

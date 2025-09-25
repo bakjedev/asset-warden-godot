@@ -9,6 +9,7 @@
 *.exp
 *.ilk
 *.idb
+*.import
 
 build/
 bin/
