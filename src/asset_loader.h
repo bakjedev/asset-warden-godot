@@ -66,7 +66,7 @@ public:
 	int status(uint64_t id);
 	Ref<Resource> get(uint64_t id);
 
-	Array get_batch(uint64_t id);
+	Dictionary get_batch(uint64_t id);
 
 protected:
 	static void _bind_methods();

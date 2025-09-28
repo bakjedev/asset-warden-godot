@@ -10,7 +10,7 @@ func _ready():
 		]
 	})
 
-func done_loading(resources: Array ):
+func done_loading(resources: Dictionary ):
 	print("GASDA", resources.size())
 
 func _process(_delta):

@@ -109,6 +109,7 @@ uint64_t AssetLoader::load_batch(const Array &p_paths, const Callable &p_callbac
 	batch.id = batch_id;
 	batch.callback = p_callback;
 	batch.total = p_paths.size();
+	batch.completed = 0;
 
 	for (int i = 0; i < p_paths.size(); ++i) {
 		String path = p_paths[i];
@@ -155,8 +156,8 @@ Ref<Resource> AssetLoader::get(uint64_t p_id) {
 	return resource;
 }
 
-Array AssetLoader::get_batch(uint64_t id) {
-	Array result;
+Dictionary AssetLoader::get_batch(uint64_t id) {
+	Dictionary result;
 
 	MutexLock batch_lock(*_batch_mutex.ptr());
 	const Batch &batch = _batches[id];
@@ -168,7 +169,7 @@ Array AssetLoader::get_batch(uint64_t id) {
 	for (auto request_id : batch.request_ids) {
 		auto it = _completed_loads.find(request_id);
 		if (it != _completed_loads.end()) {
-			result[request_id] = _completed_loads[request_id];
+			result[request_id] = it->second;
 		}
 	}
 
