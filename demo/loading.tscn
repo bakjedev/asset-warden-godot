@@ -55,10 +55,9 @@ script = ExtResource("1_gov4d")
 [node name="Camera3D" type="Camera3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 0.904381, 0.426727, 0, -0.426727, 0.904381, 0, 0, 0)
 
-[node name="TestBlocks" type="Node3D" parent="." node_paths=PackedStringArray("boxes")]
+[node name="TestBlocks" type="Node3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.16695, -2.31513, -6.3913)
 script = ExtResource("3_1l04a")
-boxes = [NodePath("Box1"), NodePath("Box2"), NodePath("Box3"), NodePath("Box4"), NodePath("Box5"), NodePath("Box6"), NodePath("Box7"), NodePath("Box8"), NodePath("Box9"), NodePath("Box10")]
 
 [node name="Box1" type="CSGBox3D" parent="TestBlocks"]
 material = SubResource("StandardMaterial3D_1l04a")

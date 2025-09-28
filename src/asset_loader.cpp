@@ -23,7 +23,8 @@ void AssetLoader::initialize(const Dictionary &p_config) {
 
 	_semaphore.instantiate();
 	_queue_mutex.instantiate();
-	UtilityFunctions::print("Created queue mutex");
+	_cache_mutex.instantiate();
+	_batch_mutex.instantiate();
 
 	auto core_count = OS::get_singleton()->get_processor_count();
 	auto available_cores = Math::max(1, core_count - 2);
@@ -54,25 +55,6 @@ void AssetLoader::initialize(const Dictionary &p_config) {
 	}
 }
 
-size_t AssetLoader::request_count() {
-	size_t count = 0;
-	if (!_queue_mutex.is_valid()) {
-		return count;
-	}
-	UtilityFunctions::print("We made it");
-	{
-		MutexLock lock(*_queue_mutex.ptr());
-		if (_asset_type_queues.size() > 0) {
-			UtilityFunctions::print("queues: " + String::num(_asset_type_queues.size()));
-		}
-		for (auto &queue : _asset_type_queues) {
-			count += queue.value.size();
-		}
-	}
-	UtilityFunctions::print("finalcount: " + String::num(count));
-	return count;
-}
-
 void AssetLoader::shutdown() {
 	_should_exit = true;
 
@@ -89,7 +71,7 @@ void AssetLoader::shutdown() {
 	_worker_threads.clear();
 
 	for (auto &asset_queue : _asset_type_queues) {
-		auto &load_queue = asset_queue.value;
+		auto &load_queue = asset_queue.second;
 		if (!load_queue.empty() && _queue_mutex.is_valid()) {
 			MutexLock lock(*_queue_mutex.ptr());
 			while (!load_queue.empty()) {
@@ -121,29 +103,83 @@ uint64_t AssetLoader::load(const String &p_path, const Callable &p_callback, Thr
 	return request.id;
 }
 
-Array AssetLoader::load_batch(const Array &p_paths, const Callable &p_callback, Thread::Priority p_priority, const String &p_type) {
-	Array request_ids;
-	request_ids.resize(p_paths.size());
+uint64_t AssetLoader::load_batch(const Array &p_paths, const Callable &p_callback, Thread::Priority p_priority, const String &p_type) {
+	uint64_t batch_id = _next_batch_id++;
+	Batch batch;
+	batch.id = batch_id;
+	batch.callback = p_callback;
+	batch.total = p_paths.size();
+
+	for (int i = 0; i < p_paths.size(); ++i) {
+		String path = p_paths[i];
+		std::string path_stl = path.utf8().get_data();
+
+		Callable batch_callback = callable_mp(this, &AssetLoader::batch_item_load).bind(batch_id);
+
+		auto request_id = load(path, batch_callback, p_priority, p_type);
+		batch.request_ids.push_back(request_id);
+	}
 
 	{
-		MutexLock lock(*_queue_mutex.ptr());
+		MutexLock lock(*_batch_mutex.ptr());
+		_batches[batch_id] = batch;
+	}
 
-		for (int i = 0; i < p_paths.size(); ++i) {
-			LoadRequest request{ _next_request_id++, p_paths[i], p_priority, p_type, p_callback };
+	return batch_id;
+}
 
-			if (p_type == "texture") {
-				_asset_type_queues["texture"].push(request);
-			} else if (p_type == "mesh") {
-				_asset_type_queues["mesh"].push(request);
-			}
+int AssetLoader::status(uint64_t p_id) {
+	MutexLock lock(*_cache_mutex.ptr());
+	auto it = _request_status.find(p_id);
+	if (it != _request_status.end()) {
+		return _request_status[p_id];
+	}
+	return STATUS_NONE;
+}
 
-			request_ids[i] = request.id;
+Ref<Resource> AssetLoader::get(uint64_t p_id) {
+	MutexLock lock(*_cache_mutex.ptr());
+	auto it = _completed_loads.find(p_id);
+	if (it == _completed_loads.end()) {
+		return Ref<Resource>();
+	}
+
+	Ref<Resource> resource = _completed_loads[p_id];
+	if (!resource.is_valid()) {
+		return Ref<Resource>();
+	}
+
+	_completed_loads.erase(p_id);
+	_request_status.erase(p_id);
+
+	return resource;
+}
+
+Array AssetLoader::get_batch(uint64_t id) {
+	Array result;
+
+	MutexLock batch_lock(*_batch_mutex.ptr());
+	const Batch &batch = _batches[id];
+	if (batch.completed < batch.total) {
+		return result;
+	}
+
+	MutexLock cache_lock(*_cache_mutex.ptr());
+	for (auto request_id : batch.request_ids) {
+		auto it = _completed_loads.find(request_id);
+		if (it != _completed_loads.end()) {
+			result[request_id] = _completed_loads[request_id];
 		}
 	}
 
-	_semaphore->post(p_paths.size());
+	for (auto request_id : batch.request_ids) {
+		_completed_loads.erase(request_id);
+		_request_status.erase(request_id);
+	}
 
-	return request_ids;
+	_batches.erase(id);
+
+	return result;
 }
 
 void AssetLoader::_bind_methods() {
@@ -153,14 +189,22 @@ void AssetLoader::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("initialize", "config"), &AssetLoader::initialize);
 	ClassDB::bind_method(D_METHOD("load", "path", "callback", "priority", "type"), &AssetLoader::load);
 	ClassDB::bind_method(D_METHOD("load_batch", "paths", "callback", "priority", "type"), &AssetLoader::load_batch);
+	ClassDB::bind_method(D_METHOD("status", "id"), &AssetLoader::status);
+	ClassDB::bind_method(D_METHOD("get", "id"), &AssetLoader::get);
+	ClassDB::bind_method(D_METHOD("get_batch", "id"), &AssetLoader::get_batch);
+	ClassDB::bind_method(D_METHOD("batch_item_load"), &AssetLoader::batch_item_load);
+
 	BIND_ENUM_CONSTANT(DIST_EQUEL);
 	BIND_ENUM_CONSTANT(DIST_CUSTOM);
+
+	BIND_ENUM_CONSTANT(STATUS_NONE);
+	BIND_ENUM_CONSTANT(STATUS_LOADING);
+	BIND_ENUM_CONSTANT(STATUS_LOADED);
+	BIND_ENUM_CONSTANT(STATUS_ERROR);
 }
 
 AssetLoader::AssetLoader() :
-		_should_exit(false), _next_request_id(1) {
-	UtilityFunctions::print("AssetLoader constructor called, this = " + String::num((int64_t)this, 0));
-
+		_should_exit(false), _next_request_id(1), _next_batch_id(1) {
 	ERR_FAIL_COND(singleton != nullptr);
 	singleton = this;
 }
@@ -189,16 +233,17 @@ void AssetLoader::_worker_thread_func(const String &p_type) {
 		bool has_request = false;
 
 		{
+			std::string type = p_type.utf8().get_data();
 			MutexLock lock(*_queue_mutex.ptr());
-			if (!_asset_type_queues[p_type].empty()) {
-				request = _asset_type_queues[p_type].top();
-				_asset_type_queues[p_type].pop();
+			if (!_asset_type_queues[type].empty()) {
+				request = _asset_type_queues[type].top();
+				_asset_type_queues[type].pop();
 				has_request = true;
 			} else {
 				for (auto &load_queue : _asset_type_queues) {
-					if (!load_queue.value.empty()) {
-						request = load_queue.value.top();
-						load_queue.value.pop();
+					if (!load_queue.second.empty()) {
+						request = load_queue.second.top();
+						load_queue.second.pop();
 						has_request = true;
 						break;
 					}
@@ -207,8 +252,21 @@ void AssetLoader::_worker_thread_func(const String &p_type) {
 		}
 
 		if (has_request) {
+			{
+				MutexLock lock(*_cache_mutex.ptr());
+				_request_status[request.id] = STATUS_LOADING;
+			}
 			auto res = ResourceLoader::get_singleton()->load(request.path, request.type);
-			//UtilityFunctions::print("Loaded ", request.path);
+
+			{
+				MutexLock lock(*_cache_mutex.ptr());
+				if (res.is_valid()) {
+					_completed_loads[request.id] = res;
+					_request_status[request.id] = STATUS_LOADED;
+				} else {
+					_request_status[request.id] = STATUS_ERROR;
+				}
+			}
 
 			if (request.callback.is_valid()) {
 				request.callback.call_deferred(res, request.path, res.is_valid() ? OK : ERR_FILE_NOT_FOUND);
@@ -217,6 +275,33 @@ void AssetLoader::_worker_thread_func(const String &p_type) {
 	}
 
 	UtilityFunctions::print("Ending thread");
+}
+
+void AssetLoader::batch_item_load(Ref<Resource> p_resource, const String &p_path,
+		int p_status, uint64_t id) {
+	bool batch_complete = false;
+	Batch batch_copy;
+
+	{
+		MutexLock lock(*_batch_mutex.ptr());
+		auto it = _batches.find(id);
+		if (it == _batches.end()) {
+			return;
+		}
+
+		Batch &batch = _batches[id];
+		batch.completed++;
+
+		if (batch.completed >= batch.total) {
+			batch_copy = batch;
+			batch_complete = true;
+		}
+	}
+
+	if (batch_complete && batch_copy.callback.is_valid()) {
+		auto res = get_batch(id);
+		batch_copy.callback.call_deferred(res);
+	}
 }
 
 void AssetLoader::create_worker_thread(const String &p_type, Thread::Priority p_priority) {

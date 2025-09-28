@@ -23,6 +23,7 @@ void initialize_bakje_extension_module(ModuleInitializationLevel p_level) {
 			break;
 		case MODULE_INITIALIZATION_LEVEL_SCENE:
 			ClassDB::register_class<AssetLoader>();
+
 			asset_loader_singleton = memnew(AssetLoader);
 			Engine::get_singleton()->register_singleton("AssetLoader", AssetLoader::get_singleton());
 			break;

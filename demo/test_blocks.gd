@@ -1,9 +1,7 @@
 extends Node3D
-
-@export var boxes: Array[Node] = []
+var lol = 0
 
 func _ready():
-	print("GDScript AssetLoader instance: ", AssetLoader.get_instance_id())
 	AssetLoader.initialize({
 		"distribution": AssetLoader.DIST_CUSTOM,
 		"pools": [
@@ -12,13 +10,12 @@ func _ready():
 		]
 	})
 
-func done_loading(resource: Resource, path: String, _error: int ):
-	boxes[int(path[-5])].material.albedo_texture = resource as Texture
-	print("Set texture for ", path[-5])
+func done_loading(resources: Array ):
+	print("GASDA", resources.size())
 
 func _process(_delta):
 	if Input.is_action_just_pressed("ui_accept"):
 		var paths = []
 		for n in 10:
 			paths.append("res://textures/noise/texture_%d.png" % n)
-		AssetLoader.load_batch(paths, done_loading, Thread.PRIORITY_NORMAL, "texture")
+		lol = AssetLoader.load_batch(paths, done_loading, Thread.PRIORITY_NORMAL, "texture")
