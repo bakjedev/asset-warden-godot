@@ -40,6 +40,7 @@ public:
 		std::vector<uint64_t> request_ids;
 		int completed;
 		int total;
+		bool errors;
 	};
 
 	enum ThreadDistribution {
@@ -63,10 +64,12 @@ public:
 	uint64_t load(const String &p_path, const Callable &p_callback = Callable(), Thread::Priority p_priority = Thread::PRIORITY_NORMAL, const String &p_type = "");
 	uint64_t load_batch(const Array &p_paths, const Callable &p_callback = Callable(), Thread::Priority p_priority = Thread::PRIORITY_NORMAL, const String &p_type = "");
 
-	int status(uint64_t id);
-	Ref<Resource> get(uint64_t id);
+	int status(uint64_t p_id);
+	Ref<Resource> get(uint64_t p_id);
 
-	Dictionary get_batch(uint64_t id);
+	Array get_batch(uint64_t p_id);
+	int status_batch(uint64_t p_id);
+	float progress_batch(uint64_t p_id);
 
 protected:
 	static void _bind_methods();
@@ -92,7 +95,7 @@ private:
 
 	void _worker_thread_func(const String &p_type);
 	void batch_item_load(Ref<Resource> p_resource, const String &p_path,
-			int p_status, uint64_t id);
+			int p_status, uint64_t p_id);
 
 	void create_worker_thread(const String &p_type, Thread::Priority p_priority);
 };

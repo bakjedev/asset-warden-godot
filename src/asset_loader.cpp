@@ -110,12 +110,13 @@ uint64_t AssetLoader::load_batch(const Array &p_paths, const Callable &p_callbac
 	batch.callback = p_callback;
 	batch.total = p_paths.size();
 	batch.completed = 0;
+	batch.errors = false;
 
 	for (int i = 0; i < p_paths.size(); ++i) {
 		String path = p_paths[i];
 		std::string path_stl = path.utf8().get_data();
 
-		Callable batch_callback = callable_mp(this, &AssetLoader::batch_item_load).bind(batch_id);
+		auto batch_callback = callable_mp(this, &AssetLoader::batch_item_load).bind(batch_id);
 
 		auto request_id = load(path, batch_callback, p_priority, p_type);
 		batch.request_ids.push_back(request_id);
@@ -145,7 +146,7 @@ Ref<Resource> AssetLoader::get(uint64_t p_id) {
 		return Ref<Resource>();
 	}
 
-	Ref<Resource> resource = _completed_loads[p_id];
+	auto resource = _completed_loads[p_id];
 	if (!resource.is_valid()) {
 		return Ref<Resource>();
 	}
@@ -156,20 +157,26 @@ Ref<Resource> AssetLoader::get(uint64_t p_id) {
 	return resource;
 }
 
-Dictionary AssetLoader::get_batch(uint64_t id) {
-	Dictionary result;
+Array AssetLoader::get_batch(uint64_t p_id) {
+	Array result;
 
 	MutexLock batch_lock(*_batch_mutex.ptr());
-	const Batch &batch = _batches[id];
+
+	auto batch_it = _batches.find(p_id);
+	if (batch_it == _batches.end()) {
+		return result;
+	}
+
+	const auto &batch = batch_it->second;
 	if (batch.completed < batch.total) {
 		return result;
 	}
 
 	MutexLock cache_lock(*_cache_mutex.ptr());
 	for (auto request_id : batch.request_ids) {
-		auto it = _completed_loads.find(request_id);
-		if (it != _completed_loads.end()) {
-			result[request_id] = it->second;
+		auto load_it = _completed_loads.find(request_id);
+		if (load_it != _completed_loads.end()) {
+			result.append(load_it->second);
 		}
 	}
 
@@ -178,9 +185,42 @@ Dictionary AssetLoader::get_batch(uint64_t id) {
 		_request_status.erase(request_id);
 	}
 
-	_batches.erase(id);
+	_batches.erase(p_id);
 
 	return result;
+}
+
+int AssetLoader::status_batch(uint64_t p_id) {
+	MutexLock lock(*_batch_mutex.ptr());
+
+	auto batch_it = _batches.find(p_id);
+	if (batch_it == _batches.end()) {
+		return STATUS_NONE;
+	}
+
+	const auto &batch = batch_it->second;
+	if (batch.completed == 0) {
+		return STATUS_LOADING;
+	} else if (batch.completed >= batch.total) {
+		return batch.errors ? STATUS_ERROR : STATUS_LOADED;
+	} else {
+		return STATUS_LOADING;
+	}
+}
+
+float AssetLoader::progress_batch(uint64_t p_id) {
+	MutexLock lock(*_batch_mutex.ptr());
+	auto it = _batches.find(p_id);
+	if (it == _batches.end()) {
+		return 0.0f;
+	}
+
+	const auto &batch = it->second;
+	if (batch.total == 0) {
+		return 0.0f;
+	}
+
+	return static_cast<float>(batch.completed) / static_cast<float>(batch.total);
 }
 
 void AssetLoader::_bind_methods() {
@@ -193,6 +233,8 @@ void AssetLoader::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("status", "id"), &AssetLoader::status);
 	ClassDB::bind_method(D_METHOD("get", "id"), &AssetLoader::get);
 	ClassDB::bind_method(D_METHOD("get_batch", "id"), &AssetLoader::get_batch);
+	ClassDB::bind_method(D_METHOD("status_batch", "id"), &AssetLoader::status_batch);
+	ClassDB::bind_method(D_METHOD("progress_batch", "id"), &AssetLoader::progress_batch);
 	ClassDB::bind_method(D_METHOD("batch_item_load"), &AssetLoader::batch_item_load);
 
 	BIND_ENUM_CONSTANT(DIST_EQUEL);
@@ -279,19 +321,23 @@ void AssetLoader::_worker_thread_func(const String &p_type) {
 }
 
 void AssetLoader::batch_item_load(Ref<Resource> p_resource, const String &p_path,
-		int p_status, uint64_t id) {
+		int p_status, uint64_t p_id) {
 	bool batch_complete = false;
 	Batch batch_copy;
 
 	{
 		MutexLock lock(*_batch_mutex.ptr());
-		auto it = _batches.find(id);
+		auto it = _batches.find(p_id);
 		if (it == _batches.end()) {
 			return;
 		}
 
-		Batch &batch = _batches[id];
+		Batch &batch = _batches[p_id];
 		batch.completed++;
+
+		if (p_status != OK && !batch.errors) {
+			batch.errors = true;
+		}
 
 		if (batch.completed >= batch.total) {
 			batch_copy = batch;
@@ -300,7 +346,7 @@ void AssetLoader::batch_item_load(Ref<Resource> p_resource, const String &p_path
 	}
 
 	if (batch_complete && batch_copy.callback.is_valid()) {
-		auto res = get_batch(id);
+		auto res = get_batch(p_id);
 		batch_copy.callback.call_deferred(res);
 	}
 }
