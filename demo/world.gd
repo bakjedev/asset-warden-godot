@@ -1,7 +1,7 @@
 extends Node3D
 
 @export var load_button: Button
-@export var progress_label: Label
+@export var progress_slider: HSlider
 
 var batch_id: int = -1
 var done: bool = false
@@ -50,8 +50,7 @@ func _on_load_button_pressed():
 
 func _process(_delta):
 	if done:
-		progress_label.text = "YES DONE " + String.num(loaded_count) + " Are Meshes? " + String.num(are_meshes)
+		progress_slider.value = 1.0
 	else:
-		var status = AssetLoader.status_batch(batch_id)
 		var progress = AssetLoader.progress_batch(batch_id)
-		progress_label.text = "Status: " + String.num(status) + " Progress: " + String.num(progress)
+		progress_slider.value = progress
