@@ -1,19 +1,20 @@
-[gd_scene load_steps=2 format=3 uid="uid://d3sqa18j1e1g6"]
+[gd_scene load_steps=4 format=3 uid="uid://d3sqa18j1e1g6"]
 
+[ext_resource type="Script" uid="uid://qhxs5cgee5e0" path="res://spinning.gd" id="2_pg7vo"]
 [ext_resource type="Script" uid="uid://bpbieixyxqc8d" path="res://world.gd" id="4_ecfth"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_pg7vo"]
+albedo_color = Color(1, 0.007843138, 0, 1)
 
 [node name="Node3D" type="Node3D"]
 
 [node name="Camera3D" type="Camera3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 0.904381, 0.426727, 0, -0.426727, 0.904381, 0, 0, 0)
+transform = Transform3D(-0.7289089, 0.29214185, -0.6191488, 0, 0.90438074, 0.42672688, 0.68461084, 0.31104493, -0.6592109, -3.5667558, 6.204317, -4.5980897)
 
-[node name="OmniLight3D" type="OmniLight3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.320829, 1.54681, -4.3913)
-light_energy = 8.767
-
-[node name="World" type="Node3D" parent="." node_paths=PackedStringArray("load_button")]
+[node name="World" type="Node3D" parent="." node_paths=PackedStringArray("load_button", "progress_label")]
 script = ExtResource("4_ecfth")
 load_button = NodePath("../Control/Button")
+progress_label = NodePath("../Control/Label")
 
 [node name="Control" type="Control" parent="."]
 layout_mode = 3
@@ -28,3 +29,19 @@ layout_mode = 0
 offset_right = 101.0
 offset_bottom = 40.0
 text = "LOAD"
+
+[node name="Label" type="Label" parent="Control"]
+layout_mode = 0
+offset_left = 3.0
+offset_top = 100.0
+offset_right = 121.0
+offset_bottom = 147.0
+text = "PROGRESS: 0"
+
+[node name="CSGBox3D" type="CSGBox3D" parent="."]
+transform = Transform3D(-0.72890884, 0, -0.68461084, 0, 1, 0, 0.68461084, 0, -0.72890884, -1.0563378, 3.7953358, -1.9252341)
+material = SubResource("StandardMaterial3D_pg7vo")
+script = ExtResource("2_pg7vo")
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.49297038, 0.8700461, 0, -0.8700461, 0.49297038, 0, 0, 0)
