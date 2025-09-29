@@ -1,0 +1,101 @@
+[gd_scene load_steps=15 format=3 uid="uid://diadw2l6g5m0m"]
+
+[ext_resource type="Script" uid="uid://b3534uuutiqjc" path="res://test_blocks.gd" id="1_fpw2s"]
+[ext_resource type="Script" uid="uid://qhxs5cgee5e0" path="res://spinning.gd" id="2_4gpls"]
+
+[sub_resource type="Gradient" id="Gradient_ecfth"]
+
+[sub_resource type="GradientTexture1D" id="GradientTexture1D_wc73m"]
+gradient = SubResource("Gradient_ecfth")
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_1l04a"]
+albedo_color = Color(0.752941, 0, 0, 1)
+albedo_texture = SubResource("GradientTexture1D_wc73m")
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_ecfth"]
+albedo_color = Color(0.752941, 0, 0, 1)
+albedo_texture = SubResource("GradientTexture1D_wc73m")
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_wc73m"]
+albedo_color = Color(0.752941, 0, 0, 1)
+albedo_texture = SubResource("GradientTexture1D_wc73m")
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_xvgud"]
+albedo_color = Color(0.752941, 0, 0, 1)
+albedo_texture = SubResource("GradientTexture1D_wc73m")
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_ypwvy"]
+albedo_color = Color(0.752941, 0, 0, 1)
+albedo_texture = SubResource("GradientTexture1D_wc73m")
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_m23s6"]
+albedo_color = Color(0.752941, 0, 0, 1)
+albedo_texture = SubResource("GradientTexture1D_wc73m")
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_25ta2"]
+albedo_color = Color(0.752941, 0, 0, 1)
+albedo_texture = SubResource("GradientTexture1D_wc73m")
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_vxij0"]
+albedo_color = Color(0.752941, 0, 0, 1)
+albedo_texture = SubResource("GradientTexture1D_wc73m")
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_odase"]
+albedo_color = Color(0.752941, 0, 0, 1)
+albedo_texture = SubResource("GradientTexture1D_wc73m")
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_aecca"]
+albedo_color = Color(0.752941, 0, 0, 1)
+albedo_texture = SubResource("GradientTexture1D_wc73m")
+
+[node name="TestBlocks" type="Node3D"]
+script = ExtResource("1_fpw2s")
+
+[node name="Box1" type="CSGBox3D" parent="."]
+material = SubResource("StandardMaterial3D_1l04a")
+script = ExtResource("2_4gpls")
+
+[node name="Box2" type="CSGBox3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 2)
+material = SubResource("StandardMaterial3D_ecfth")
+script = ExtResource("2_4gpls")
+
+[node name="Box3" type="CSGBox3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 4)
+material = SubResource("StandardMaterial3D_wc73m")
+script = ExtResource("2_4gpls")
+
+[node name="Box4" type="CSGBox3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 0, 0)
+material = SubResource("StandardMaterial3D_xvgud")
+script = ExtResource("2_4gpls")
+
+[node name="Box5" type="CSGBox3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 0, 2)
+material = SubResource("StandardMaterial3D_ypwvy")
+script = ExtResource("2_4gpls")
+
+[node name="Box6" type="CSGBox3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 0, 4)
+material = SubResource("StandardMaterial3D_m23s6")
+script = ExtResource("2_4gpls")
+
+[node name="Box7" type="CSGBox3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4, 0, 0)
+material = SubResource("StandardMaterial3D_25ta2")
+script = ExtResource("2_4gpls")
+
+[node name="Box8" type="CSGBox3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4, 0, 2)
+material = SubResource("StandardMaterial3D_vxij0")
+script = ExtResource("2_4gpls")
+
+[node name="Box9" type="CSGBox3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4, 0, 4)
+material = SubResource("StandardMaterial3D_odase")
+script = ExtResource("2_4gpls")
+
+[node name="Box10" type="CSGBox3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6, 0, 2)
+material = SubResource("StandardMaterial3D_aecca")
+script = ExtResource("2_4gpls")
