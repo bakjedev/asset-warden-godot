@@ -33,7 +33,7 @@ void AssetLoader::initialize(const Dictionary &p_config) {
 		auto distribution = static_cast<ThreadDistribution>(static_cast<int>(p_config["distribution"]));
 
 		switch (distribution) {
-			case DIST_EQUEL: {
+			case DIST_EQUAL: {
 				for (int i = 0; i < available_cores; ++i) {
 					create_worker_thread("", Thread::PRIORITY_NORMAL);
 				}
@@ -84,18 +84,12 @@ void AssetLoader::shutdown() {
 	_next_request_id = 1;
 }
 
-uint64_t AssetLoader::load(const String &p_path, const Callable &p_callback, Thread::Priority p_priority, const String &p_type) {
+uint64_t AssetLoader::load(const String &p_path, const Callable &p_callback, Thread::Priority p_priority, const StringName &p_type) {
 	LoadRequest request{ _next_request_id++, p_path, p_priority, p_type, p_callback };
 
 	{
 		MutexLock lock(*_queue_mutex.ptr());
-		if (p_type == "texture") {
-			_asset_type_queues["texture"].push(request);
-		} else if (p_type == "mesh") {
-			_asset_type_queues["mesh"].push(request);
-		} else {
-			return 0;
-		}
+		_asset_type_queues[p_type].push(request);
 	}
 
 	_semaphore->post();
@@ -103,20 +97,19 @@ uint64_t AssetLoader::load(const String &p_path, const Callable &p_callback, Thr
 	return request.id;
 }
 
-uint64_t AssetLoader::load_batch(const Array &p_paths, const Callable &p_callback, Thread::Priority p_priority, const String &p_type) {
+uint64_t AssetLoader::load_batch(const Array &p_paths, const Callable &p_callback, const Callable &p_batch_callback, Thread::Priority p_priority, const StringName &p_type) {
 	uint64_t batch_id = _next_batch_id++;
 	Batch batch;
 	batch.id = batch_id;
-	batch.callback = p_callback;
+	batch.callback = p_batch_callback;
 	batch.total = p_paths.size();
 	batch.completed = 0;
 	batch.errors = false;
 
 	for (int i = 0; i < p_paths.size(); ++i) {
 		String path = p_paths[i];
-		std::string path_stl = path.utf8().get_data();
 
-		auto batch_callback = callable_mp(this, &AssetLoader::batch_item_load).bind(batch_id);
+		auto batch_callback = callable_mp(this, &AssetLoader::batch_item_load).bind(batch_id, p_callback);
 
 		auto request_id = load(path, batch_callback, p_priority, p_type);
 		batch.request_ids.push_back(request_id);
@@ -254,7 +247,7 @@ void AssetLoader::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("_worker_thread_func"), &AssetLoader::_worker_thread_func);
 	ClassDB::bind_method(D_METHOD("initialize", "config"), &AssetLoader::initialize);
 	ClassDB::bind_method(D_METHOD("load", "path", "callback", "priority", "type"), &AssetLoader::load);
-	ClassDB::bind_method(D_METHOD("load_batch", "paths", "callback", "priority", "type"), &AssetLoader::load_batch);
+	ClassDB::bind_method(D_METHOD("load_batch", "paths", "callback", "batch_callback", "priority", "type"), &AssetLoader::load_batch);
 	ClassDB::bind_method(D_METHOD("status", "id"), &AssetLoader::status);
 	ClassDB::bind_method(D_METHOD("get", "id"), &AssetLoader::get);
 	ClassDB::bind_method(D_METHOD("get_batch", "id"), &AssetLoader::get_batch);
@@ -264,7 +257,7 @@ void AssetLoader::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("cancel_batch", "id"), &AssetLoader::cancel_batch);
 	ClassDB::bind_method(D_METHOD("batch_item_load"), &AssetLoader::batch_item_load);
 
-	BIND_ENUM_CONSTANT(DIST_EQUEL);
+	BIND_ENUM_CONSTANT(DIST_EQUAL);
 	BIND_ENUM_CONSTANT(DIST_CUSTOM);
 
 	BIND_ENUM_CONSTANT(STATUS_NONE);
@@ -290,7 +283,7 @@ AssetLoader *AssetLoader::get_singleton() {
 	return singleton;
 }
 
-void AssetLoader::_worker_thread_func(const String &p_type) {
+void AssetLoader::_worker_thread_func(const StringName &p_type) {
 	UtilityFunctions::print("Starting thread");
 
 	while (!_should_exit) {
@@ -304,11 +297,10 @@ void AssetLoader::_worker_thread_func(const String &p_type) {
 		bool has_request = false;
 
 		{
-			std::string type = p_type.utf8().get_data();
 			MutexLock lock(*_queue_mutex.ptr());
-			if (!_asset_type_queues[type].empty()) {
-				request = _asset_type_queues[type].top();
-				_asset_type_queues[type].pop();
+			if (!_asset_type_queues[p_type].empty()) {
+				request = _asset_type_queues[p_type].top();
+				_asset_type_queues[p_type].pop();
 				has_request = true;
 			} else {
 				for (auto &load_queue : _asset_type_queues) {
@@ -353,7 +345,7 @@ void AssetLoader::_worker_thread_func(const String &p_type) {
 }
 
 void AssetLoader::batch_item_load(Ref<Resource> p_resource, const String &p_path,
-		int p_status, uint64_t p_id) {
+		int p_status, uint64_t p_id, const Callable &p_callback) {
 	bool batch_complete = false;
 	Batch batch_copy;
 
@@ -377,13 +369,17 @@ void AssetLoader::batch_item_load(Ref<Resource> p_resource, const String &p_path
 		}
 	}
 
+	if (p_callback.is_valid()) {
+		p_callback.call_deferred(p_resource);
+	}
+
 	if (batch_complete && batch_copy.callback.is_valid()) {
-		auto res = get_batch(p_id);
-		batch_copy.callback.call_deferred(res);
+		auto resources = get_batch(p_id);
+		batch_copy.callback.call_deferred(resources);
 	}
 }
 
-void AssetLoader::create_worker_thread(const String &p_type, Thread::Priority p_priority) {
+void AssetLoader::create_worker_thread(const StringName &p_type, Thread::Priority p_priority) {
 	Ref<Thread> worker_thread;
 	worker_thread.instantiate();
 	worker_thread->start(Callable(this, "_worker_thread_func").bind(p_type), p_priority);

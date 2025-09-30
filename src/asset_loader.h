@@ -26,7 +26,7 @@ public:
 		uint64_t id;
 		String path;
 		Thread::Priority priority;
-		String type;
+		StringName type;
 		Callable callback;
 
 		bool operator<(const LoadRequest &other) const {
@@ -44,7 +44,7 @@ public:
 	};
 
 	enum ThreadDistribution {
-		DIST_EQUEL,
+		DIST_EQUAL,
 		DIST_CUSTOM
 	};
 
@@ -62,8 +62,8 @@ public:
 
 	void initialize(const Dictionary &p_config);
 
-	uint64_t load(const String &p_path, const Callable &p_callback = Callable(), Thread::Priority p_priority = Thread::PRIORITY_NORMAL, const String &p_type = "");
-	uint64_t load_batch(const Array &p_paths, const Callable &p_callback = Callable(), Thread::Priority p_priority = Thread::PRIORITY_NORMAL, const String &p_type = "");
+	uint64_t load(const String &p_path, const Callable &p_callback = Callable(), Thread::Priority p_priority = Thread::PRIORITY_NORMAL, const StringName &p_type = "");
+	uint64_t load_batch(const Array &p_paths, const Callable &p_callback = Callable(), const Callable &p_batch_callback = Callable(), Thread::Priority p_priority = Thread::PRIORITY_NORMAL, const StringName &p_type = "");
 
 	int status(uint64_t p_id);
 	Ref<Resource> get(uint64_t p_id);
@@ -83,7 +83,7 @@ private:
 	Ref<Semaphore> _semaphore;
 	std::atomic<bool> _should_exit;
 
-	std::unordered_map<std::string, std::priority_queue<LoadRequest>> _asset_type_queues;
+	std::unordered_map<StringName, std::priority_queue<LoadRequest>> _asset_type_queues;
 	std::unordered_map<uint64_t, Ref<Resource>> _completed_loads;
 	std::unordered_map<uint64_t, int> _request_status;
 	std::unordered_map<uint64_t, Batch> _batches;
@@ -97,11 +97,11 @@ private:
 
 	void shutdown();
 
-	void _worker_thread_func(const String &p_type);
+	void _worker_thread_func(const StringName &p_type);
 	void batch_item_load(Ref<Resource> p_resource, const String &p_path,
-			int p_status, uint64_t p_id);
+			int p_status, uint64_t p_id, const Callable &p_callback);
 
-	void create_worker_thread(const String &p_type, Thread::Priority p_priority);
+	void create_worker_thread(const StringName &p_type, Thread::Priority p_priority);
 };
 
 } // namespace godot

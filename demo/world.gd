@@ -1,12 +1,14 @@
 extends Node3D
 
 @export var load_button: Button
+@export var cancel_button: Button
 @export var progress_slider: HSlider
+@export var label: Label
 
 var batch_id: int = -1
-var done: bool = false
-var loaded_count: int = 0
-var are_meshes: bool = false
+var spacing = 10.0
+var index = 0
+var done = false
 
 func _ready():
 	AssetLoader.initialize({
@@ -19,34 +21,31 @@ func _ready():
 	
 	if load_button:
 		load_button.pressed.connect(_on_load_button_pressed)
+	if cancel_button:
+		cancel_button.pressed.connect(_on_cancel_button_pressed)
 
-func done_loading(_res: Array):
-	print("DONE!")
+func test(resource: Resource):
+	var mesh = resource as Mesh
+	var mesh_instance = MeshInstance3D.new()
+	mesh_instance.mesh = mesh
+	var x_pos = (index % 16) * spacing
+	var z_pos = (index / 16.0) * spacing
+	mesh_instance.position = Vector3(x_pos, 0, z_pos)
+	mesh_instance.rotation_degrees = Vector3(180, 0, 0)
+	add_child(mesh_instance)
+	index += 1
+
+func done_loading(_resources: Array):
 	done = true
-	loaded_count = _res.size()
-	if _res[0] is Mesh and not are_meshes:
-		are_meshes = true
-	
-	var spacing = 10.0
-	var index = 0
-	
-	for resource in _res:
-		var mesh = resource as Mesh
-		var mesh_instance = MeshInstance3D.new()
-		mesh_instance.mesh = mesh
-		var x_pos = (index % 16) * spacing
-		var z_pos = (index / 16.0) * spacing
-		mesh_instance.position = Vector3(x_pos, 0, z_pos)
-		mesh_instance.rotation_degrees = Vector3(180, 0, 0)
-		add_child(mesh_instance)
-		index += 1
-
 
 func _on_load_button_pressed():
 	var paths = []
 	for n in 256:
 		paths.append("res://sub100world/terrain_sub100_%d.obj" % n)
-	batch_id = AssetLoader.load_batch(paths, done_loading,Thread.PRIORITY_NORMAL, "mesh")
+	batch_id = AssetLoader.load_batch(paths, test, done_loading, Thread.PRIORITY_NORMAL, "mesh")
+
+func _on_cancel_button_pressed():
+	AssetLoader.cancel_batch(batch_id)
 
 func _process(_delta):
 	if done:
