@@ -223,6 +223,31 @@ float AssetLoader::progress_batch(uint64_t p_id) {
 	return static_cast<float>(batch.completed) / static_cast<float>(batch.total);
 }
 
+void AssetLoader::cancel(uint64_t p_id) {
+	MutexLock cache_lock(*_cache_mutex.ptr());
+	_completed_loads.erase(p_id);
+	_request_status[p_id] = STATUS_CANCELLED;
+}
+
+void AssetLoader::cancel_batch(uint64_t p_id) {
+	MutexLock batch_lock(*_batch_mutex.ptr());
+	auto batch_it = _batches.find(p_id);
+	if (batch_it == _batches.end()) {
+		return;
+	}
+
+	const auto &batch = batch_it->second;
+	{
+		MutexLock cache_lock(*_cache_mutex.ptr());
+		for (auto request_id : batch.request_ids) {
+			_completed_loads.erase(request_id);
+			_request_status[request_id] = STATUS_CANCELLED;
+		}
+	}
+
+	_batches.erase(p_id);
+}
+
 void AssetLoader::_bind_methods() {
 	ClassDB::bind_static_method("AssetLoader", D_METHOD("get_singleton"),
 			&AssetLoader::get_singleton);
@@ -235,6 +260,8 @@ void AssetLoader::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_batch", "id"), &AssetLoader::get_batch);
 	ClassDB::bind_method(D_METHOD("status_batch", "id"), &AssetLoader::status_batch);
 	ClassDB::bind_method(D_METHOD("progress_batch", "id"), &AssetLoader::progress_batch);
+	ClassDB::bind_method(D_METHOD("cancel", "id"), &AssetLoader::cancel);
+	ClassDB::bind_method(D_METHOD("cancel_batch", "id"), &AssetLoader::cancel_batch);
 	ClassDB::bind_method(D_METHOD("batch_item_load"), &AssetLoader::batch_item_load);
 
 	BIND_ENUM_CONSTANT(DIST_EQUEL);
@@ -244,6 +271,7 @@ void AssetLoader::_bind_methods() {
 	BIND_ENUM_CONSTANT(STATUS_LOADING);
 	BIND_ENUM_CONSTANT(STATUS_LOADED);
 	BIND_ENUM_CONSTANT(STATUS_ERROR);
+	BIND_ENUM_CONSTANT(STATUS_CANCELLED);
 }
 
 AssetLoader::AssetLoader() :
@@ -297,6 +325,10 @@ void AssetLoader::_worker_thread_func(const String &p_type) {
 		if (has_request) {
 			{
 				MutexLock lock(*_cache_mutex.ptr());
+				if (_request_status[request.id] == STATUS_CANCELLED) {
+					_request_status.erase(request.id);
+					continue;
+				}
 				_request_status[request.id] = STATUS_LOADING;
 			}
 			auto res = ResourceLoader::get_singleton()->load(request.path, request.type);

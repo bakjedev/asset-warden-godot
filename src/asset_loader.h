@@ -52,7 +52,8 @@ public:
 		STATUS_NONE,
 		STATUS_LOADING,
 		STATUS_LOADED,
-		STATUS_ERROR
+		STATUS_ERROR,
+		STATUS_CANCELLED
 	};
 
 	AssetLoader();
@@ -70,6 +71,9 @@ public:
 	Array get_batch(uint64_t p_id);
 	int status_batch(uint64_t p_id);
 	float progress_batch(uint64_t p_id);
+
+	void cancel(uint64_t p_id);
+	void cancel_batch(uint64_t p_id);
 
 protected:
 	static void _bind_methods();
