@@ -1,0 +1,41 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "build",
+			"group": "build",
+			"type": "shell",
+			"command": "scons",
+			"args": [
+				"dev_build=yes",
+				"debug_symbols=yes",
+				"target=template_debug",
+				"verbose=yes",
+				"optimize=debug",
+				"use_hot_reload=yes",
+				"compiledb=yes"
+			],
+			"options": {
+				"cwd": "${workspaceFolder}"
+			},
+			"presentation": {
+				"echo": true,
+				"revealProblems": "onProblem",
+				"focus": false,
+				"panel": "shared",
+				"showReuseMessage": true,
+				"clear": false
+			},
+			"problemMatcher": "$msCompile"
+		},
+		{
+			"label": "full-build",
+			"dependsOn": [
+				"build"
+			],
+			"dependsOrder": "sequence",
+			"type": "shell",
+			"command": "echo Running full build..."
+		}
+	]
+}

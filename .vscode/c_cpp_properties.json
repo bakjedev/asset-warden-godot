@@ -1,0 +1,23 @@
+{
+	"configurations": [
+		{
+			"name": "Win32",
+			"includePath": [
+				"${workspaceFolder}/src/**",
+				"${workspaceFolder}/godot-cpp/include/**",
+				"${workspaceFolder}/godot-cpp/gen/include/**"
+			],
+			"defines": [
+				"_DEBUG",
+				"UNICODE",
+				"_UNICODE",
+				"WIN32"
+			],
+			"compilerPath": "C:/Program Files/LLVM/bin/clang++.exe",
+			"cStandard": "c17",
+			"cppStandard": "c++17",
+			"intelliSenseMode": "clang-x64"
+		}
+	],
+	"version": 4
+}
