@@ -1,14 +1,13 @@
 extends Node3D
 
 @export var load_button: Button
-@export var cancel_button: Button
 @export var progress_slider: HSlider
 @export var label: Label
 
 var batch_id: int = -1
 var spacing = 10.0
 var index = 0
-var done = false
+var cancel = false
 
 func _ready():
 	AssetLoader.initialize({
@@ -21,8 +20,6 @@ func _ready():
 	
 	if load_button:
 		load_button.pressed.connect(_on_load_button_pressed)
-	if cancel_button:
-		cancel_button.pressed.connect(_on_cancel_button_pressed)
 
 func test(resource: Resource):
 	var mesh = resource as Mesh
@@ -36,20 +33,22 @@ func test(resource: Resource):
 	index += 1
 
 func done_loading(_resources: Array):
-	done = true
+	cancel = false
+	load_button.text = "Load"
 
 func _on_load_button_pressed():
-	var paths = []
-	for n in 256:
-		paths.append("res://sub100world/terrain_sub100_%d.obj" % n)
-	batch_id = AssetLoader.load_batch(paths, test, done_loading, Thread.PRIORITY_NORMAL, "mesh")
-
-func _on_cancel_button_pressed():
-	AssetLoader.cancel_batch(batch_id)
+	if cancel:
+		load_button.text = "Load"
+		AssetLoader.cancel_batch(batch_id)
+		cancel = false
+	else:
+		load_button.text = "Cancel"
+		var paths = []
+		for n in 256:
+			paths.append("res://sub100world/terrain_sub100_%d.obj" % n)
+		batch_id = AssetLoader.load_batch(paths, "mesh", Thread.PRIORITY_NORMAL, test, done_loading)
+		cancel = true
 
 func _process(_delta):
-	if done:
-		progress_slider.value = 1.0
-	else:
-		var progress = AssetLoader.progress_batch(batch_id)
-		progress_slider.value = progress
+	var progress = AssetLoader.progress_batch(batch_id)
+	progress_slider.value = progress

@@ -84,7 +84,7 @@ void AssetLoader::shutdown() {
 	_next_request_id = 1;
 }
 
-uint64_t AssetLoader::load(const String &p_path, const Callable &p_callback, Thread::Priority p_priority, const StringName &p_type) {
+uint64_t AssetLoader::load(const String &p_path, const StringName &p_type, Thread::Priority p_priority, const Callable &p_callback) {
 	LoadRequest request{ _next_request_id++, p_path, p_priority, p_type, p_callback };
 
 	{
@@ -97,7 +97,7 @@ uint64_t AssetLoader::load(const String &p_path, const Callable &p_callback, Thr
 	return request.id;
 }
 
-uint64_t AssetLoader::load_batch(const Array &p_paths, const Callable &p_callback, const Callable &p_batch_callback, Thread::Priority p_priority, const StringName &p_type) {
+uint64_t AssetLoader::load_batch(const Array &p_paths, const StringName &p_type, Thread::Priority p_priority, const Callable &p_callback, const Callable &p_batch_callback) {
 	uint64_t batch_id = _next_batch_id++;
 	Batch batch;
 	batch.id = batch_id;
@@ -111,7 +111,7 @@ uint64_t AssetLoader::load_batch(const Array &p_paths, const Callable &p_callbac
 
 		auto batch_callback = callable_mp(this, &AssetLoader::batch_item_load).bind(batch_id, p_callback);
 
-		auto request_id = load(path, batch_callback, p_priority, p_type);
+		auto request_id = load(path, p_type, p_priority, batch_callback);
 		batch.request_ids.push_back(request_id);
 	}
 

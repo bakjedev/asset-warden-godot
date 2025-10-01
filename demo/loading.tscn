@@ -11,10 +11,9 @@ albedo_color = Color(1, 0.007843138, 0, 1)
 [node name="Camera3D" type="Camera3D" parent="."]
 transform = Transform3D(-0.7289089, 0.29214185, -0.6191488, 0, 0.90438074, 0.42672688, 0.68461084, 0.31104493, -0.6592109, -3.5667558, 6.204317, -4.5980897)
 
-[node name="World" type="Node3D" parent="." node_paths=PackedStringArray("load_button", "cancel_button", "progress_slider", "label")]
+[node name="World" type="Node3D" parent="." node_paths=PackedStringArray("load_button", "progress_slider", "label")]
 script = ExtResource("4_ecfth")
 load_button = NodePath("../Control/LoadButton")
-cancel_button = NodePath("../Control/CancelButton")
 progress_slider = NodePath("../Control/HSlider")
 label = NodePath("../Control/Label")
 
@@ -54,14 +53,6 @@ offset_top = 151.0
 offset_right = 194.0
 offset_bottom = 174.0
 text = "tesxxxx"
-
-[node name="CancelButton" type="Button" parent="Control"]
-layout_mode = 0
-offset_left = -3.0
-offset_top = 57.0
-offset_right = 98.0
-offset_bottom = 97.0
-text = "CANCEL"
 
 [node name="CSGBox3D" type="CSGBox3D" parent="."]
 transform = Transform3D(-0.72890884, 0, -0.68461084, 0, 1, 0, 0.68461084, 0, -0.72890884, -1.0563378, 3.7953358, -1.9252341)

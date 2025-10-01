@@ -30,7 +30,7 @@ public:
 		Callable callback;
 
 		bool operator<(const LoadRequest &other) const {
-			return (priority < other.priority);
+			return (priority > other.priority);
 		}
 	};
 
@@ -62,8 +62,8 @@ public:
 
 	void initialize(const Dictionary &p_config);
 
-	uint64_t load(const String &p_path, const Callable &p_callback = Callable(), Thread::Priority p_priority = Thread::PRIORITY_NORMAL, const StringName &p_type = "");
-	uint64_t load_batch(const Array &p_paths, const Callable &p_callback = Callable(), const Callable &p_batch_callback = Callable(), Thread::Priority p_priority = Thread::PRIORITY_NORMAL, const StringName &p_type = "");
+	uint64_t load(const String &p_path, const StringName &p_type, Thread::Priority p_priority = Thread::PRIORITY_NORMAL, const Callable &p_callback = Callable());
+	uint64_t load_batch(const Array &p_paths, const StringName &p_type, Thread::Priority p_priority = Thread::PRIORITY_NORMAL, const Callable &p_callback = Callable(), const Callable &p_batch_callback = Callable());
 
 	int status(uint64_t p_id);
 	Ref<Resource> get(uint64_t p_id);

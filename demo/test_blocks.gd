@@ -24,4 +24,4 @@ func _process(_delta):
 		var paths = []
 		for n in 10:
 			paths.append("res://textures/noise/texture_%d.png" % n)
-		lol = AssetLoader.load_batch(paths, Callable(), Thread.PRIORITY_NORMAL, "texture")
+		lol = AssetLoader.load_batch(paths, "texture",Thread.PRIORITY_NORMAL, Callable(),Callable())
