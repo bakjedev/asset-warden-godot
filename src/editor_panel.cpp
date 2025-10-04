@@ -48,8 +48,8 @@ void CustomDock::_physics_process(double) {
 
 void CustomDock::hi(const String &id, const Array &data) {
 	if (_label) {
-		int batch_total = data[0];
-		_label->set_text(id + String(" ") + String::num(batch_total, 0));
+		int request_count = data[0];
+		_label->set_text(id + String(" Request Count: ") + String::num(request_count, 0));
 	}
 }
 
@@ -69,7 +69,7 @@ void EditorPanel::_enter_tree() {
 
 	_debug_receiver = DebugReceiver::create("bakjetest");
 
-	_debug_receiver->on("batch_total", Callable(_custom_dock, "hi"));
+	_debug_receiver->on("request_count", Callable(_custom_dock, "hi"));
 
 	add_debugger_plugin(_debug_receiver->plugin());
 }

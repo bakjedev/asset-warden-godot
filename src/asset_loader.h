@@ -8,6 +8,7 @@
 #include <godot_cpp/classes/mutex.hpp>
 #include <godot_cpp/classes/semaphore.hpp>
 #include <godot_cpp/classes/thread.hpp>
+#include <godot_cpp/classes/timer.hpp>
 #include <godot_cpp/core/object.hpp>
 #include <godot_cpp/templates/hash_map.hpp>
 #include <godot_cpp/templates/vector.hpp>
@@ -97,6 +98,7 @@ private:
 	uint64_t _next_batch_id;
 
 	Ref<DebugSender> _debug_sender;
+	Timer *_debug_timer = nullptr;
 
 	void shutdown();
 
@@ -105,6 +107,9 @@ private:
 			int p_status, uint64_t p_id, const Callable &p_callback);
 
 	void create_worker_thread(const StringName &p_type, Thread::Priority p_priority);
+
+	void _initialize_timer();
+	void _on_timer();
 };
 
 } // namespace godot

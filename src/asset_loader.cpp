@@ -2,12 +2,17 @@
 #include "debug_sender.h"
 #include "godot_cpp/classes/engine.hpp"
 #include "godot_cpp/classes/global_constants.hpp"
+#include "godot_cpp/classes/main_loop.hpp"
 #include "godot_cpp/classes/os.hpp"
 #include "godot_cpp/classes/resource.hpp"
 #include "godot_cpp/classes/resource_loader.hpp"
+#include "godot_cpp/classes/scene_tree.hpp"
 #include "godot_cpp/classes/thread.hpp"
+#include "godot_cpp/classes/timer.hpp"
+#include "godot_cpp/classes/window.hpp"
 #include "godot_cpp/core/class_db.hpp"
 #include "godot_cpp/core/error_macros.hpp"
+#include "godot_cpp/core/memory.hpp"
 #include "godot_cpp/core/mutex_lock.hpp"
 #include "godot_cpp/variant/callable.hpp"
 #include "godot_cpp/variant/dictionary.hpp"
@@ -27,6 +32,8 @@ void AssetLoader::initialize(const Dictionary &p_config) {
 	_cache_mutex.instantiate();
 	_batch_mutex.instantiate();
 	_debug_sender = DebugSender::create("bakjetest");
+
+	_initialize_timer();
 
 	auto core_count = OS::get_singleton()->get_processor_count();
 	auto available_cores = Math::max(1, core_count - 2);
@@ -107,7 +114,6 @@ uint64_t AssetLoader::load_batch(const Array &p_paths, const StringName &p_type,
 	batch.total = p_paths.size();
 	batch.completed = 0;
 	batch.errors = false;
-	_debug_sender->send("batch_total", batch.total);
 
 	for (int i = 0; i < p_paths.size(); ++i) {
 		String path = p_paths[i];
@@ -259,6 +265,7 @@ void AssetLoader::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("cancel", "id"), &AssetLoader::cancel);
 	ClassDB::bind_method(D_METHOD("cancel_batch", "id"), &AssetLoader::cancel_batch);
 	ClassDB::bind_method(D_METHOD("batch_item_load"), &AssetLoader::batch_item_load);
+	ClassDB::bind_method(D_METHOD("_on_timer"), &AssetLoader::_on_timer);
 
 	BIND_ENUM_CONSTANT(DIST_EQUAL);
 	BIND_ENUM_CONSTANT(DIST_CUSTOM);
@@ -387,4 +394,39 @@ void AssetLoader::create_worker_thread(const StringName &p_type, Thread::Priorit
 	worker_thread.instantiate();
 	worker_thread->start(Callable(this, "_worker_thread_func").bind(p_type), p_priority);
 	_worker_threads.push_back(worker_thread);
+}
+
+void AssetLoader::_initialize_timer() {
+	if (_debug_timer) {
+		return;
+	}
+
+	_debug_timer = memnew(Timer);
+
+	MainLoop *main_loop = Engine::get_singleton()->get_main_loop();
+	SceneTree *scene_tree = Object::cast_to<SceneTree>(main_loop);
+
+	if (!scene_tree || !scene_tree->get_root()) {
+		memdelete(_debug_timer);
+		_debug_timer = nullptr;
+		return;
+	}
+
+	Window *root = scene_tree->get_root();
+
+	_debug_timer->set_wait_time(0.1f);
+	_debug_timer->set_one_shot(false);
+
+	root->call_deferred("add_child", _debug_timer);
+
+	_debug_timer->call_deferred("connect", "timeout", Callable(this, "_on_timer"));
+	_debug_timer->call_deferred("start");
+}
+
+void AssetLoader::_on_timer() {
+	int request_count = 0;
+	for (const auto &queue : _asset_type_queues) {
+		request_count += queue.second.size();
+	}
+	_debug_sender->send("request_count", request_count);
 }
