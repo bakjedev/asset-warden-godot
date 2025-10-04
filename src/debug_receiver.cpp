@@ -39,10 +39,6 @@ bool DebugReceiverPlugin::_capture(const String &p_message, const Array &p_data,
 	String channel = parts[0];
 	String id = parts[1];
 
-	if (channel != _channel) {
-		return false;
-	}
-
 	auto it = _callbacks.find(id.utf8().get_data());
 	if (it != _callbacks.end()) {
 		it->second.call_deferred(id, p_data);

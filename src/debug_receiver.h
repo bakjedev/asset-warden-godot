@@ -3,7 +3,6 @@
 #include "godot_cpp/classes/editor_debugger_plugin.hpp"
 #include "godot_cpp/classes/ref_counted.hpp"
 #include "godot_cpp/variant/string.hpp"
-#include "godot_cpp/variant/variant.hpp"
 #include <godot_cpp/variant/callable.hpp>
 #include <unordered_map>
 
