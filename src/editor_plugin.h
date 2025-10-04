@@ -9,8 +9,8 @@
 
 namespace godot {
 
-class CustomDock : public Control {
-	GDCLASS(CustomDock, Control);
+class AssetWardenPanel : public Control {
+	GDCLASS(AssetWardenPanel, Control);
 
 private:
 	VBoxContainer *_vbox;
@@ -20,26 +20,25 @@ protected:
 	static void _bind_methods();
 
 public:
-	CustomDock();
-	~CustomDock();
+	AssetWardenPanel();
+	~AssetWardenPanel();
 
 	virtual void _physics_process(double delta) override;
 	void hi(const String &id, const Array &data);
 };
 
-class EditorPanel : public EditorPlugin {
-	GDCLASS(EditorPanel, EditorPlugin)
+class AssetWardenEditorPlugin : public EditorPlugin {
+	GDCLASS(AssetWardenEditorPlugin, EditorPlugin)
 private:
-	CustomDock *_custom_dock;
+	AssetWardenPanel *_panel;
 	Ref<DebugReceiver> _debug_receiver;
 
 protected:
-	static void
-	_bind_methods() {}
+	static void _bind_methods() {}
 
 public:
-	EditorPanel();
-	~EditorPanel();
+	AssetWardenEditorPlugin();
+	~AssetWardenEditorPlugin();
 
 	void _enter_tree() override;
 	void _exit_tree() override;

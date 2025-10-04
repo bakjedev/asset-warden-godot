@@ -3,7 +3,7 @@
 #include "asset_loader.h"
 #include "debug_receiver.h"
 #include "debug_sender.h"
-#include "editor_panel.h"
+#include "editor_plugin.h"
 
 #include "godot_cpp/core/memory.hpp"
 
@@ -33,10 +33,10 @@ void initialize_bakje_extension_module(ModuleInitializationLevel p_level) {
 			break;
 		case MODULE_INITIALIZATION_LEVEL_EDITOR:
 			ClassDB::register_internal_class<CustomDock>();
-			ClassDB::register_internal_class<EditorPanel>();
+			ClassDB::register_internal_class<AssetWardenEditorPlugin>();
 			ClassDB::register_class<DebugReceiver>();
 			ClassDB::register_class<DebugReceiverPlugin>();
-			EditorPlugins::add_by_type<EditorPanel>();
+			EditorPlugins::add_by_type<AssetWardenEditorPlugin>();
 			break;
 		case MODULE_INITIALIZATION_LEVEL_MAX:
 			break;

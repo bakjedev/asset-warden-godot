@@ -103,6 +103,8 @@ uint64_t AssetLoader::load(const String &p_path, const StringName &p_type, Threa
 
 	_semaphore->post();
 
+	_on_timer();
+
 	return request.id;
 }
 
@@ -414,7 +416,7 @@ void AssetLoader::_initialize_timer() {
 
 	Window *root = scene_tree->get_root();
 
-	_debug_timer->set_wait_time(0.1f);
+	_debug_timer->set_wait_time(1.0f);
 	_debug_timer->set_one_shot(false);
 
 	root->call_deferred("add_child", _debug_timer);
@@ -425,8 +427,28 @@ void AssetLoader::_initialize_timer() {
 
 void AssetLoader::_on_timer() {
 	int request_count = 0;
-	for (const auto &queue : _asset_type_queues) {
-		request_count += queue.second.size();
+	Dictionary result;
+	for (const auto &[asset_type, queue] : _asset_type_queues) {
+		Array queue_array;
+
+		std::priority_queue<LoadRequest> temp_queue = queue;
+
+		while (!temp_queue.empty()) {
+			const auto &request = temp_queue.top();
+			Dictionary dict;
+			dict["id"] = request.id;
+			dict["path"] = request.path;
+			dict["priority"] = request.priority;
+			dict["type"] = request.type;
+			queue_array.append(dict);
+			temp_queue.pop();
+		}
+
+		result[asset_type] = queue_array;
+
+		request_count += queue.size();
 	}
+
 	_debug_sender->send("request_count", request_count);
+	_debug_sender->send("queues", result);
 }
