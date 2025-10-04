@@ -1,4 +1,5 @@
 #include "asset_loader.h"
+#include "debug_sender.h"
 #include "godot_cpp/classes/engine.hpp"
 #include "godot_cpp/classes/global_constants.hpp"
 #include "godot_cpp/classes/os.hpp"
@@ -25,6 +26,7 @@ void AssetLoader::initialize(const Dictionary &p_config) {
 	_queue_mutex.instantiate();
 	_cache_mutex.instantiate();
 	_batch_mutex.instantiate();
+	_debug_sender = DebugSender::create("bakjetest");
 
 	auto core_count = OS::get_singleton()->get_processor_count();
 	auto available_cores = Math::max(1, core_count - 2);
@@ -105,6 +107,7 @@ uint64_t AssetLoader::load_batch(const Array &p_paths, const StringName &p_type,
 	batch.total = p_paths.size();
 	batch.completed = 0;
 	batch.errors = false;
+	_debug_sender->send("batch_total", batch.total);
 
 	for (int i = 0; i < p_paths.size(); ++i) {
 		String path = p_paths[i];

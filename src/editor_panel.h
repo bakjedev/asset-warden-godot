@@ -1,5 +1,6 @@
 #pragma once
 
+#include "debug_receiver.h"
 #include "godot_cpp/classes/v_box_container.hpp"
 #include <godot_cpp/classes/button.hpp>
 #include <godot_cpp/classes/editor_plugin.hpp>
@@ -16,19 +17,21 @@ private:
 	Label *_label;
 
 protected:
-	static void _bind_methods() {}
+	static void _bind_methods();
 
 public:
 	CustomDock();
 	~CustomDock();
 
 	virtual void _physics_process(double delta) override;
+	void hi(const String &id, const Array &data);
 };
 
 class EditorPanel : public EditorPlugin {
 	GDCLASS(EditorPanel, EditorPlugin)
 private:
 	CustomDock *_custom_dock;
+	Ref<DebugReceiver> _debug_receiver;
 
 protected:
 	static void

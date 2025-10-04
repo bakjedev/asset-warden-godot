@@ -1,7 +1,10 @@
 #include "register_types.h"
 
 #include "asset_loader.h"
+#include "debug_receiver.h"
+#include "debug_sender.h"
 #include "editor_panel.h"
+
 #include "godot_cpp/core/memory.hpp"
 
 #include <godot_cpp/classes/engine.hpp>
@@ -23,6 +26,7 @@ void initialize_bakje_extension_module(ModuleInitializationLevel p_level) {
 			break;
 		case MODULE_INITIALIZATION_LEVEL_SCENE:
 			ClassDB::register_class<AssetLoader>();
+			ClassDB::register_class<DebugSender>();
 
 			asset_loader_singleton = memnew(AssetLoader);
 			Engine::get_singleton()->register_singleton("AssetLoader", AssetLoader::get_singleton());
@@ -30,6 +34,8 @@ void initialize_bakje_extension_module(ModuleInitializationLevel p_level) {
 		case MODULE_INITIALIZATION_LEVEL_EDITOR:
 			ClassDB::register_internal_class<CustomDock>();
 			ClassDB::register_internal_class<EditorPanel>();
+			ClassDB::register_class<DebugReceiver>();
+			ClassDB::register_class<DebugReceiverPlugin>();
 			EditorPlugins::add_by_type<EditorPanel>();
 			break;
 		case MODULE_INITIALIZATION_LEVEL_MAX:

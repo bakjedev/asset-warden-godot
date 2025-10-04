@@ -1,6 +1,6 @@
 // editor_plugin.cpp
 #include "editor_panel.h"
-#include "asset_loader.h"
+#include "debug_receiver.h"
 #include "godot_cpp/classes/editor_interface.hpp"
 #include <godot_cpp/classes/button.hpp>
 #include <godot_cpp/classes/engine.hpp>
@@ -11,6 +11,10 @@
 #include <godot_cpp/variant/utility_functions.hpp>
 
 namespace godot {
+
+void CustomDock::_bind_methods() {
+	ClassDB::bind_method(D_METHOD("hi"), &CustomDock::hi);
+}
 
 CustomDock::CustomDock() {
 	set_custom_minimum_size({ 0, 200 });
@@ -36,9 +40,16 @@ CustomDock::~CustomDock() {
 }
 
 void CustomDock::_physics_process(double) {
-	auto asset_loader = AssetLoader::get_singleton();
-	if (_label && asset_loader) {
-		_label->set_text("Request csssount: ");
+	// auto asset_loader = AssetLoader::get_singleton();
+	// if (_label && asset_loader) {
+	// 	_label->set_text("Request csssount: ");
+	// }
+}
+
+void CustomDock::hi(const String &id, const Array &data) {
+	if (_label) {
+		int batch_total = data[0];
+		_label->set_text(id + String(" ") + String::num(batch_total, 0));
 	}
 }
 
@@ -55,9 +66,19 @@ EditorPanel::~EditorPanel() {
 void EditorPanel::_enter_tree() {
 	_custom_dock = memnew(CustomDock);
 	add_control_to_bottom_panel(_custom_dock, "bakje dock");
+
+	_debug_receiver = DebugReceiver::create("bakjetest");
+
+	_debug_receiver->on("batch_total", Callable(_custom_dock, "hi"));
+
+	add_debugger_plugin(_debug_receiver->plugin());
 }
 
 void EditorPanel::_exit_tree() {
+	if (_debug_receiver.is_valid()) {
+		remove_debugger_plugin(_debug_receiver->plugin());
+	}
+
 	remove_control_from_bottom_panel(_custom_dock);
 	if (_custom_dock) {
 		_custom_dock->queue_free();

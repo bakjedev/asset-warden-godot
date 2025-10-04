@@ -1,4 +1,5 @@
 #pragma once
+#include "debug_sender.h"
 #include "godot_cpp/classes/ref.hpp"
 #include "godot_cpp/classes/resource.hpp"
 #include "godot_cpp/variant/callable.hpp"
@@ -94,6 +95,8 @@ private:
 
 	uint64_t _next_request_id;
 	uint64_t _next_batch_id;
+
+	Ref<DebugSender> _debug_sender;
 
 	void shutdown();
 
