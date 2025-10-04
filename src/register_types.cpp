@@ -32,7 +32,7 @@ void initialize_bakje_extension_module(ModuleInitializationLevel p_level) {
 			Engine::get_singleton()->register_singleton("AssetLoader", AssetLoader::get_singleton());
 			break;
 		case MODULE_INITIALIZATION_LEVEL_EDITOR:
-			ClassDB::register_internal_class<CustomDock>();
+			ClassDB::register_internal_class<AssetWardenPanel>();
 			ClassDB::register_internal_class<AssetWardenEditorPlugin>();
 			ClassDB::register_class<DebugReceiver>();
 			ClassDB::register_class<DebugReceiverPlugin>();
