@@ -4,15 +4,9 @@
 #include "debugger/debug_receiver.h"
 #include "debugger/debug_sender.h"
 #include "editor/editor_plugin.h"
-
-#include "godot_cpp/core/memory.hpp"
+#include "editor/panel.h"
 
 #include <godot_cpp/classes/engine.hpp>
-#include <godot_cpp/core/class_db.hpp>
-#include <godot_cpp/core/defs.hpp>
-#include <godot_cpp/godot.hpp>
-
-#include <gdextension_interface.h>
 
 using namespace godot;
 
