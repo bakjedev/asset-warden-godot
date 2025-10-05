@@ -1,10 +1,12 @@
 // editor_plugin.cpp
 #include "editor_plugin.h"
-#include "debug_receiver.h"
+#include "debugger/debug_receiver.h"
 #include "godot_cpp/classes/editor_interface.hpp"
+#include "godot_cpp/core/memory.hpp"
 #include "godot_cpp/variant/dictionary.hpp"
 #include <godot_cpp/classes/button.hpp>
 #include <godot_cpp/classes/engine.hpp>
+#include <godot_cpp/classes/font.hpp>
 #include <godot_cpp/classes/label.hpp>
 #include <godot_cpp/classes/resource_loader.hpp>
 #include <godot_cpp/classes/v_box_container.hpp>

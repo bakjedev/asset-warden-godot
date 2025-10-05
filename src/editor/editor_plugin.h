@@ -1,6 +1,6 @@
 #pragma once
 
-#include "debug_receiver.h"
+#include "debugger/debug_receiver.h"
 #include "godot_cpp/classes/v_box_container.hpp"
 #include <godot_cpp/classes/button.hpp>
 #include <godot_cpp/classes/editor_plugin.hpp>
@@ -23,7 +23,6 @@ public:
 	AssetWardenPanel();
 	~AssetWardenPanel();
 
-	virtual void _physics_process(double delta) override;
 	void hi(const String &id, const Array &data);
 };
 

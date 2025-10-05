@@ -1,5 +1,5 @@
 #include "asset_loader.h"
-#include "debug_sender.h"
+#include "debugger/debug_sender.h"
 #include "godot_cpp/classes/engine.hpp"
 #include "godot_cpp/classes/global_constants.hpp"
 #include "godot_cpp/classes/main_loop.hpp"
@@ -102,8 +102,6 @@ uint64_t AssetLoader::load(const String &p_path, const StringName &p_type, Threa
 	}
 
 	_semaphore->post();
-
-	_on_timer();
 
 	return request.id;
 }
@@ -416,7 +414,7 @@ void AssetLoader::_initialize_timer() {
 
 	Window *root = scene_tree->get_root();
 
-	_debug_timer->set_wait_time(1.0f);
+	_debug_timer->set_wait_time(0.0166f);
 	_debug_timer->set_one_shot(false);
 
 	root->call_deferred("add_child", _debug_timer);

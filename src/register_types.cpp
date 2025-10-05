@@ -1,9 +1,9 @@
 #include "register_types.h"
 
-#include "asset_loader.h"
-#include "debug_receiver.h"
-#include "debug_sender.h"
-#include "editor_plugin.h"
+#include "core/asset_loader.h"
+#include "debugger/debug_receiver.h"
+#include "debugger/debug_sender.h"
+#include "editor/editor_plugin.h"
 
 #include "godot_cpp/core/memory.hpp"
 

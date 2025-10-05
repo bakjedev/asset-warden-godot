@@ -1,5 +1,5 @@
 #pragma once
-#include "debug_sender.h"
+#include "debugger/debug_sender.h"
 #include "godot_cpp/classes/ref.hpp"
 #include "godot_cpp/classes/resource.hpp"
 #include "godot_cpp/variant/callable.hpp"
