@@ -2,15 +2,17 @@
 #pragma once
 
 #include "godot_cpp/classes/v_box_container.hpp"
+#include "graph.h"
 #include <godot_cpp/classes/label.hpp>
 
 namespace godot {
-class AssetWardenPanel : public Control {
-	GDCLASS(AssetWardenPanel, Control);
+class AssetWardenPanel : public VBoxContainer {
+	GDCLASS(AssetWardenPanel, VBoxContainer);
 
 private:
-	VBoxContainer *_vbox;
-	Label *_label;
+	Label *_label = nullptr;
+	Label *_label_2 = nullptr;
+	AssetWardenGraph *_graph = nullptr;
 
 protected:
 	static void _bind_methods();
