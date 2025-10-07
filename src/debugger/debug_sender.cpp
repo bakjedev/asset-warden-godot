@@ -24,7 +24,9 @@ void DebugSender::send(const String &p_id, const Variant &p_data) {
 	String full_id = _channel + ":" + p_id;
 
 	Array data;
-	data.append(p_data);
+	if (p_data.get_type() != Variant::NIL) {
+		data.append(p_data);
+	}
 
 	EngineDebugger::get_singleton()->send_message(full_id, data);
 }

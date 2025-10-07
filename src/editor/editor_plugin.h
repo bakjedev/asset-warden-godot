@@ -12,8 +12,10 @@ private:
 	AssetWardenPanel *_panel;
 	Ref<DebugReceiver> _debug_receiver;
 
+	void _on_debug_message(const String &id, const Array &data);
+
 protected:
-	static void _bind_methods() {}
+	static void _bind_methods();
 
 public:
 	AssetWardenEditorPlugin();

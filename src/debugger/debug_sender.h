@@ -22,5 +22,5 @@ public:
 
 	void initialize(const String &p_channel);
 
-	void send(const String &p_id, const Variant &p_data);
+	void send(const String &p_id, const Variant &p_data = Variant::NIL);
 };

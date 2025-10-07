@@ -425,28 +425,9 @@ void AssetLoader::_initialize_timer() {
 
 void AssetLoader::_on_timer() {
 	int request_count = 0;
-	Dictionary result;
 	for (const auto &[asset_type, queue] : _asset_type_queues) {
-		Array queue_array;
-
-		std::priority_queue<LoadRequest> temp_queue = queue;
-
-		while (!temp_queue.empty()) {
-			const auto &request = temp_queue.top();
-			Dictionary dict;
-			dict["id"] = request.id;
-			dict["path"] = request.path;
-			dict["priority"] = request.priority;
-			dict["type"] = request.type;
-			queue_array.append(dict);
-			temp_queue.pop();
-		}
-
-		result[asset_type] = queue_array;
-
 		request_count += queue.size();
 	}
 
 	_debug_sender->send("request_count", request_count);
-	_debug_sender->send("queues", result);
 }

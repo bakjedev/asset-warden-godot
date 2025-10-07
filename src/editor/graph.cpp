@@ -42,8 +42,6 @@ void AssetWardenGraph::_bind_methods() {
 AssetWardenGraph::AssetWardenGraph() {
 	set_h_size_flags(Control::SIZE_EXPAND_FILL);
 	set_v_size_flags(Control::SIZE_EXPAND_FILL);
-
-	_points.emplace_back(0.0f, 100.0f);
 }
 
 AssetWardenGraph::~AssetWardenGraph() {
@@ -103,9 +101,17 @@ void AssetWardenGraph::_draw() {
 }
 
 void AssetWardenGraph::add_point(float p_value) {
+	if (_points.size() >= _max_points) {
+		_points.pop_front();
+	}
 	_points.emplace_back(_next_pos, p_value);
 	_next_pos += 0.1f;
 	set_scale_x(_next_pos, 50.0f);
+}
+
+void AssetWardenGraph::clear_points() {
+	_points.clear();
+	queue_redraw();
 }
 
 void AssetWardenGraph::set_scale_x(float p_focus, float p_scale) {
