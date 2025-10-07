@@ -25,7 +25,7 @@ using namespace godot;
 AssetLoader *AssetLoader::singleton = nullptr;
 
 void AssetLoader::initialize(const Dictionary &p_config) {
-	shutdown();
+	_shutdown();
 
 	_semaphore.instantiate();
 	_queue_mutex.instantiate();
@@ -33,7 +33,7 @@ void AssetLoader::initialize(const Dictionary &p_config) {
 	_batch_mutex.instantiate();
 	_debug_sender = DebugSender::create("bakjetest");
 
-	_initialize_timer();
+	_setup_process_loop();
 
 	auto core_count = OS::get_singleton()->get_processor_count();
 	auto available_cores = Math::max(1, core_count - 2);
@@ -64,7 +64,16 @@ void AssetLoader::initialize(const Dictionary &p_config) {
 	}
 }
 
-void AssetLoader::shutdown() {
+void AssetLoader::_shutdown() {
+	if (_process_connected) {
+		MainLoop *main_loop = Engine::get_singleton()->get_main_loop();
+		SceneTree *scene_tree = Object::cast_to<SceneTree>(main_loop);
+		if (scene_tree) {
+			scene_tree->disconnect("process_frame", Callable(this, "_process_frame"));
+		}
+		_process_connected = false;
+	}
+
 	_should_exit = true;
 
 	if (_semaphore.is_valid()) {
@@ -265,7 +274,7 @@ void AssetLoader::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("cancel", "id"), &AssetLoader::cancel);
 	ClassDB::bind_method(D_METHOD("cancel_batch", "id"), &AssetLoader::cancel_batch);
 	ClassDB::bind_method(D_METHOD("batch_item_load"), &AssetLoader::batch_item_load);
-	ClassDB::bind_method(D_METHOD("_on_timer"), &AssetLoader::_on_timer);
+	ClassDB::bind_method(D_METHOD("_process_frame"), &AssetLoader::_process_frame);
 
 	BIND_ENUM_CONSTANT(DIST_EQUAL);
 	BIND_ENUM_CONSTANT(DIST_CUSTOM);
@@ -286,7 +295,7 @@ AssetLoader::AssetLoader() :
 AssetLoader::~AssetLoader() {
 	ERR_FAIL_COND(singleton != this);
 	singleton = nullptr;
-	shutdown();
+	_shutdown();
 }
 
 AssetLoader *AssetLoader::get_singleton() {
@@ -396,34 +405,21 @@ void AssetLoader::create_worker_thread(const StringName &p_type, Thread::Priorit
 	_worker_threads.push_back(worker_thread);
 }
 
-void AssetLoader::_initialize_timer() {
-	if (_debug_timer) {
+void AssetLoader::_setup_process_loop() {
+	auto *main_loop = Engine::get_singleton()->get_main_loop();
+	auto *scene_tree = Object::cast_to<SceneTree>(main_loop);
+
+	if (!scene_tree) {
 		return;
 	}
 
-	_debug_timer = memnew(Timer);
-
-	MainLoop *main_loop = Engine::get_singleton()->get_main_loop();
-	SceneTree *scene_tree = Object::cast_to<SceneTree>(main_loop);
-
-	if (!scene_tree || !scene_tree->get_root()) {
-		memdelete(_debug_timer);
-		_debug_timer = nullptr;
-		return;
+	if (!_process_connected) {
+		scene_tree->connect("process_frame", Callable(this, "_process_frame"));
+		_process_connected = true;
 	}
-
-	Window *root = scene_tree->get_root();
-
-	_debug_timer->set_wait_time(0.0166f);
-	_debug_timer->set_one_shot(false);
-
-	root->call_deferred("add_child", _debug_timer);
-
-	_debug_timer->call_deferred("connect", "timeout", Callable(this, "_on_timer"));
-	_debug_timer->call_deferred("start");
 }
 
-void AssetLoader::_on_timer() {
+void AssetLoader::_process_frame() {
 	int request_count = 0;
 	for (const auto &[asset_type, queue] : _asset_type_queues) {
 		request_count += queue.size();

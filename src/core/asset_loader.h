@@ -98,9 +98,9 @@ private:
 	uint64_t _next_batch_id;
 
 	Ref<DebugSender> _debug_sender;
-	Timer *_debug_timer = nullptr;
+	bool _process_connected = false;
 
-	void shutdown();
+	void _shutdown();
 
 	void _worker_thread_func(const StringName &p_type);
 	void batch_item_load(Ref<Resource> p_resource, const String &p_path,
@@ -108,8 +108,8 @@ private:
 
 	void create_worker_thread(const StringName &p_type, Thread::Priority p_priority);
 
-	void _initialize_timer();
-	void _on_timer();
+	void _setup_process_loop();
+	void _process_frame();
 };
 
 } // namespace godot
