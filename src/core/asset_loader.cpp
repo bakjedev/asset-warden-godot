@@ -32,6 +32,7 @@ void AssetLoader::initialize(const Dictionary &p_config) {
 	_cache_mutex.instantiate();
 	_batch_mutex.instantiate();
 	_debug_sender = DebugSender::create("bakjetest");
+	_memory_budget.instantiate();
 
 	_setup_process_loop();
 
@@ -44,7 +45,7 @@ void AssetLoader::initialize(const Dictionary &p_config) {
 		switch (distribution) {
 			case DIST_EQUAL: {
 				for (int i = 0; i < available_cores; ++i) {
-					create_worker_thread("", Thread::PRIORITY_NORMAL);
+					_create_worker_thread("", Thread::PRIORITY_NORMAL);
 				}
 				break;
 			}
@@ -54,7 +55,7 @@ void AssetLoader::initialize(const Dictionary &p_config) {
 					for (int i = 0; i < pools.size(); ++i) {
 						Dictionary pool = pools[i];
 						for (int j = 0; j < static_cast<int>(pool["count"]); ++j) {
-							create_worker_thread(pool["type"], static_cast<Thread::Priority>(static_cast<int>(pool["priority"])));
+							_create_worker_thread(pool["type"], static_cast<Thread::Priority>(static_cast<int>(pool["priority"])));
 						}
 					}
 				}
@@ -65,15 +66,6 @@ void AssetLoader::initialize(const Dictionary &p_config) {
 }
 
 void AssetLoader::_shutdown() {
-	if (_process_connected) {
-		MainLoop *main_loop = Engine::get_singleton()->get_main_loop();
-		SceneTree *scene_tree = Object::cast_to<SceneTree>(main_loop);
-		if (scene_tree) {
-			scene_tree->disconnect("process_frame", Callable(this, "_process_frame"));
-		}
-		_process_connected = false;
-	}
-
 	_should_exit = true;
 
 	if (_semaphore.is_valid()) {
@@ -127,7 +119,7 @@ uint64_t AssetLoader::load_batch(const Array &p_paths, const StringName &p_type,
 	for (int i = 0; i < p_paths.size(); ++i) {
 		String path = p_paths[i];
 
-		auto batch_callback = callable_mp(this, &AssetLoader::batch_item_load).bind(batch_id, p_callback);
+		auto batch_callback = callable_mp(this, &AssetLoader::_batch_item_load).bind(batch_id, p_callback);
 
 		auto request_id = load(path, p_type, p_priority, batch_callback);
 		batch.request_ids.push_back(request_id);
@@ -273,8 +265,7 @@ void AssetLoader::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("progress_batch", "id"), &AssetLoader::progress_batch);
 	ClassDB::bind_method(D_METHOD("cancel", "id"), &AssetLoader::cancel);
 	ClassDB::bind_method(D_METHOD("cancel_batch", "id"), &AssetLoader::cancel_batch);
-	ClassDB::bind_method(D_METHOD("batch_item_load"), &AssetLoader::batch_item_load);
-	ClassDB::bind_method(D_METHOD("_process_frame"), &AssetLoader::_process_frame);
+	ClassDB::bind_method(D_METHOD("_batch_item_load"), &AssetLoader::_batch_item_load);
 
 	BIND_ENUM_CONSTANT(DIST_EQUAL);
 	BIND_ENUM_CONSTANT(DIST_CUSTOM);
@@ -349,6 +340,7 @@ void AssetLoader::_worker_thread_func(const StringName &p_type) {
 				if (res.is_valid()) {
 					_completed_loads[request.id] = res;
 					_request_status[request.id] = STATUS_LOADED;
+					_memory_budget->register_resource(res);
 				} else {
 					_request_status[request.id] = STATUS_ERROR;
 				}
@@ -363,7 +355,7 @@ void AssetLoader::_worker_thread_func(const StringName &p_type) {
 	UtilityFunctions::print("Ending thread");
 }
 
-void AssetLoader::batch_item_load(Ref<Resource> p_resource, const String &p_path,
+void AssetLoader::_batch_item_load(Ref<Resource> p_resource, const String &p_path,
 		int p_status, uint64_t p_id, const Callable &p_callback) {
 	bool batch_complete = false;
 	Batch batch_copy;
@@ -398,7 +390,7 @@ void AssetLoader::batch_item_load(Ref<Resource> p_resource, const String &p_path
 	}
 }
 
-void AssetLoader::create_worker_thread(const StringName &p_type, Thread::Priority p_priority) {
+void AssetLoader::_create_worker_thread(const StringName &p_type, Thread::Priority p_priority) {
 	Ref<Thread> worker_thread;
 	worker_thread.instantiate();
 	worker_thread->start(Callable(this, "_worker_thread_func").bind(p_type), p_priority);
@@ -409,21 +401,24 @@ void AssetLoader::_setup_process_loop() {
 	auto *main_loop = Engine::get_singleton()->get_main_loop();
 	auto *scene_tree = Object::cast_to<SceneTree>(main_loop);
 
-	if (!scene_tree) {
-		return;
-	}
+	_node = memnew(AssetLoaderNode);
+	_node->asset_loader = this;
 
-	if (!_process_connected) {
-		scene_tree->connect("process_frame", Callable(this, "_process_frame"));
-		_process_connected = true;
+	if (_node) {
+		scene_tree->get_root()->call_deferred("add_child", _node);
 	}
 }
 
-void AssetLoader::_process_frame() {
+void AssetLoaderNode::_process(double delta) {
+	asset_loader->_memory_budget->process_pending_resources(2);
+}
+
+void AssetLoaderNode::_physics_process(double delta) {
 	int request_count = 0;
-	for (const auto &[asset_type, queue] : _asset_type_queues) {
+	for (const auto &[asset_type, queue] : asset_loader->_asset_type_queues) {
 		request_count += queue.size();
 	}
 
-	_debug_sender->send("request_count", request_count);
+	asset_loader->_debug_sender->send("request_count", request_count);
+	asset_loader->_debug_sender->send("bytes", asset_loader->_memory_budget->bytes());
 }

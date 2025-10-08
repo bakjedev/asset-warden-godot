@@ -22,5 +22,6 @@ public:
 	~AssetWardenPanel();
 
 	auto graph() { return _graph; }
+	auto label() { return _label; }
 };
 } //namespace godot

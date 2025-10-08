@@ -1,6 +1,7 @@
 #include "register_types.h"
 
 #include "core/asset_loader.h"
+#include "core/memory_budget.h"
 #include "debugger/debug_receiver.h"
 #include "debugger/debug_sender.h"
 #include "editor/editor_plugin.h"
@@ -20,6 +21,8 @@ void initialize_bakje_extension_module(ModuleInitializationLevel p_level) {
 			break;
 		case MODULE_INITIALIZATION_LEVEL_SCENE:
 			ClassDB::register_class<AssetLoader>();
+			ClassDB::register_class<AssetLoaderNode>();
+			ClassDB::register_class<MemoryBudget>();
 			ClassDB::register_class<DebugSender>();
 
 			asset_loader_singleton = memnew(AssetLoader);

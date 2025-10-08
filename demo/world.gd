@@ -26,7 +26,7 @@ func test(resource: Resource):
 	var mesh_instance = MeshInstance3D.new()
 	mesh_instance.mesh = mesh
 	var x_pos = (index % 16) * spacing
-	var z_pos = (index / 16.0) * spacing
+	var z_pos = (index / 16) * spacing
 	mesh_instance.position = Vector3(x_pos, 0, z_pos)
 	mesh_instance.rotation_degrees = Vector3(180, 0, 0)
 	add_child(mesh_instance)

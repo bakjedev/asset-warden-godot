@@ -4,6 +4,7 @@
 #include "godot_cpp/classes/resource.hpp"
 #include "godot_cpp/variant/callable.hpp"
 #include "godot_cpp/variant/dictionary.hpp"
+#include "memory_budget.h"
 #include <cstdint>
 #include <godot_cpp/classes/mutex.hpp>
 #include <godot_cpp/classes/semaphore.hpp>
@@ -17,6 +18,8 @@
 #include <vector>
 
 namespace godot {
+
+class AssetLoaderNode;
 
 class AssetLoader : public Object {
 	GDCLASS(AssetLoader, Object)
@@ -81,6 +84,8 @@ protected:
 	static void _bind_methods();
 
 private:
+	friend class AssetLoaderNode;
+
 	std::vector<Ref<Thread>> _worker_threads;
 	Ref<Semaphore> _semaphore;
 	std::atomic<bool> _should_exit;
@@ -98,18 +103,33 @@ private:
 	uint64_t _next_batch_id;
 
 	Ref<DebugSender> _debug_sender;
-	bool _process_connected = false;
+
+	Ref<MemoryBudget> _memory_budget;
+	AssetLoaderNode *_node = nullptr;
 
 	void _shutdown();
 
 	void _worker_thread_func(const StringName &p_type);
-	void batch_item_load(Ref<Resource> p_resource, const String &p_path,
+	void _batch_item_load(Ref<Resource> p_resource, const String &p_path,
 			int p_status, uint64_t p_id, const Callable &p_callback);
 
-	void create_worker_thread(const StringName &p_type, Thread::Priority p_priority);
+	void _create_worker_thread(const StringName &p_type, Thread::Priority p_priority);
 
 	void _setup_process_loop();
-	void _process_frame();
+};
+
+class AssetLoaderNode : public Node {
+	GDCLASS(AssetLoaderNode, Node);
+
+private:
+protected:
+	static void _bind_methods() {}
+
+public:
+	AssetLoader *asset_loader = nullptr;
+
+	virtual void _process(double delta) override;
+	virtual void _physics_process(double delta) override;
 };
 
 } // namespace godot

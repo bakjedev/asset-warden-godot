@@ -7,6 +7,9 @@ void AssetWardenEditorPlugin::_on_debug_message(const String &id, const Array &d
 	if (id == "request_count") {
 		int request_count = data[0];
 		_panel->graph()->add_point(request_count);
+	} else if (id == "bytes") {
+		size_t bytes = data[0];
+		_panel->label()->set_text(String::num(bytes));
 	}
 }
 
@@ -31,8 +34,7 @@ void AssetWardenEditorPlugin::_enter_tree() {
 	_debug_receiver = DebugReceiver::create("bakjetest");
 
 	_debug_receiver->on("request_count", Callable(this, "_on_debug_message"));
-	_debug_receiver->on("queues", Callable(this, "_on_debug_message"));
-	_debug_receiver->on("shutdown", Callable(this, "_on_debug_message"));
+	_debug_receiver->on("bytes", Callable(this, "_on_debug_message"));
 
 	add_debugger_plugin(_debug_receiver->plugin());
 }
