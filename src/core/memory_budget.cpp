@@ -100,12 +100,17 @@ void MemoryBudget::process_pending_resources(const int p_max) {
 		_cache.insert(ObjectID{ resource->get_instance_id() }, size);
 	}
 
+	Vector<ObjectID> to_remove;
 	for (auto it = _cache.begin(); it != _cache.end(); ++it) {
 		Object *obj = ObjectDB::get_instance(it->key);
 		if (!obj) {
-			_bytes -= it->value;
-			_cache.erase(it->key);
-			UtilityFunctions::print("ERASED OBJECT");
+			to_remove.push_back(it->key);
 		}
+	}
+
+	for (const auto &key : to_remove) {
+		_bytes -= _cache[key];
+		_cache.erase(key);
+		UtilityFunctions::print("ERASED OBJECT");
 	}
 }

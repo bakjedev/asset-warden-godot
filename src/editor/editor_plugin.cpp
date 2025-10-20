@@ -1,7 +1,7 @@
 // editor_plugin.cpp
 #include "editor_plugin.h"
 
-namespace godot {
+using namespace godot;
 
 void AssetWardenEditorPlugin::_on_debug_message(const String &id, const Array &data) {
 	if (id == "request_count") {
@@ -50,5 +50,3 @@ void AssetWardenEditorPlugin::_exit_tree() {
 		_panel = nullptr;
 	}
 }
-
-} //namespace godot
