@@ -2,13 +2,11 @@
 #include "debugger/debug_sender.h"
 #include "godot_cpp/classes/engine.hpp"
 #include "godot_cpp/classes/global_constants.hpp"
-#include "godot_cpp/classes/main_loop.hpp"
 #include "godot_cpp/classes/os.hpp"
 #include "godot_cpp/classes/resource.hpp"
 #include "godot_cpp/classes/resource_loader.hpp"
 #include "godot_cpp/classes/scene_tree.hpp"
 #include "godot_cpp/classes/thread.hpp"
-#include "godot_cpp/classes/timer.hpp"
 #include "godot_cpp/classes/window.hpp"
 #include "godot_cpp/core/class_db.hpp"
 #include "godot_cpp/core/error_macros.hpp"
@@ -266,6 +264,7 @@ void AssetLoader::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("cancel", "id"), &AssetLoader::cancel);
 	ClassDB::bind_method(D_METHOD("cancel_batch", "id"), &AssetLoader::cancel_batch);
 	ClassDB::bind_method(D_METHOD("_batch_item_load"), &AssetLoader::_batch_item_load);
+	ClassDB::bind_method(D_METHOD("set_budget", "type", "budget"), &MemoryBudget::set_budget);
 
 	BIND_ENUM_CONSTANT(DIST_EQUAL);
 	BIND_ENUM_CONSTANT(DIST_CUSTOM);

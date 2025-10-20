@@ -19,6 +19,7 @@ func _ready():
 		]
 	})
 	
+	
 	if load_button:
 		load_button.pressed.connect(_on_load_button_pressed)
 		

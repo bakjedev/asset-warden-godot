@@ -3,6 +3,7 @@
 #include "godot_cpp/core/object_id.hpp"
 #include "godot_cpp/templates/hash_map.hpp"
 #include "godot_cpp/templates/hash_set.hpp"
+#include "godot_cpp/variant/string.hpp"
 #include <cstddef>
 #include <godot_cpp/classes/ref_counted.hpp>
 #include <godot_cpp/classes/resource.hpp>
@@ -18,6 +19,8 @@ private:
 	HashSet<Ref<Resource>> _pending_resources;
 	HashMap<ObjectID, size_t> _cache;
 
+	HashMap<String, size_t> _budgets;
+
 	size_t _get_size(const Ref<Resource> &p_resource) const;
 
 protected:
@@ -31,6 +34,8 @@ public:
 	auto bytes() const { return _bytes.load(); }
 
 	void process_pending_resources(int p_max = 5);
+
+	void set_budget(const String &p_type, size_t p_budget);
 };
 
 } // namespace godot

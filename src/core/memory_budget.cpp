@@ -13,6 +13,7 @@
 using namespace godot;
 
 size_t MemoryBudget::_get_size(const Ref<Resource> &p_resource) const {
+	//scuffed size estimation for resources.
 	auto class_name = p_resource->get_class();
 
 	if (class_name == "Image") {
@@ -63,6 +64,7 @@ MemoryBudget::MemoryBudget() {
 	_cache_mutex.instantiate();
 }
 
+// this function will be called from separate worker threads.
 void MemoryBudget::register_resource(const Ref<Resource> &p_resource) {
 	if (!p_resource.is_valid()) {
 		return;
@@ -76,6 +78,7 @@ void MemoryBudget::register_resource(const Ref<Resource> &p_resource) {
 	_pending_resources.insert(p_resource);
 }
 
+// this function will be run on the main thread
 void MemoryBudget::process_pending_resources(const int p_max) {
 	Vector<Ref<Resource>> to_process;
 
@@ -85,7 +88,7 @@ void MemoryBudget::process_pending_resources(const int p_max) {
 		auto count = MIN(_pending_resources.size(), p_max);
 
 		auto it = _pending_resources.begin();
-		for (size_t i = 0; i < count && it != _pending_resources.end(); ++i, ++it) {
+		for (size_t i = 0; i < count; ++i, ++it) {
 			to_process.push_back(*it);
 		}
 
@@ -94,23 +97,35 @@ void MemoryBudget::process_pending_resources(const int p_max) {
 		}
 	}
 
+	// out of lock cuz _get_size is heavy
+	HashMap<ObjectID, size_t> sizes_to_add;
 	for (const auto &resource : to_process) {
-		auto size = _get_size(resource);
-		_bytes += size;
-		_cache.insert(ObjectID{ resource->get_instance_id() }, size);
+		sizes_to_add.insert(ObjectID{ resource->get_instance_id() }, _get_size(resource));
 	}
 
-	Vector<ObjectID> to_remove;
-	for (auto it = _cache.begin(); it != _cache.end(); ++it) {
-		Object *obj = ObjectDB::get_instance(it->key);
-		if (!obj) {
-			to_remove.push_back(it->key);
+	{
+		MutexLock lock(*_cache_mutex.ptr());
+		for (const auto &[id, size] : sizes_to_add) {
+			_bytes += size;
+			_cache.insert(id, size);
+		}
+
+		Vector<ObjectID> to_remove;
+		for (auto it = _cache.begin(); it != _cache.end(); ++it) {
+			Object *obj = ObjectDB::get_instance(it->key);
+			if (!obj) {
+				to_remove.push_back(it->key);
+			}
+		}
+
+		for (const auto &key : to_remove) {
+			_bytes -= _cache[key];
+			_cache.erase(key);
+			UtilityFunctions::print("ERASED OBJECT");
 		}
 	}
+}
 
-	for (const auto &key : to_remove) {
-		_bytes -= _cache[key];
-		_cache.erase(key);
-		UtilityFunctions::print("ERASED OBJECT");
-	}
+void MemoryBudget::set_budget(const String &p_type, const size_t p_budget) {
+	_budgets.insert(p_type, p_budget);
 }
