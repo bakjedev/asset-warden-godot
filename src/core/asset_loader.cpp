@@ -340,11 +340,12 @@ void AssetLoader::_worker_thread_func(const StringName &p_type) {
 				if (res.is_valid()) {
 					_completed_loads[request.id] = res;
 					_request_status[request.id] = STATUS_LOADED;
-					_memory_budget->register_resource(res);
 				} else {
 					_request_status[request.id] = STATUS_ERROR;
 				}
 			}
+
+			_memory_budget->register_resource(res);
 
 			if (request.callback.is_valid()) {
 				request.callback.call_deferred(res, request.path, res.is_valid() ? OK : ERR_FILE_NOT_FOUND);

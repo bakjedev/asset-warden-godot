@@ -1,5 +1,7 @@
 #pragma once
 #include "godot_cpp/classes/mutex.hpp"
+#include "godot_cpp/core/object_id.hpp"
+#include "godot_cpp/templates/hash_map.hpp"
 #include "godot_cpp/templates/hash_set.hpp"
 #include <cstddef>
 #include <godot_cpp/classes/ref_counted.hpp>
@@ -12,9 +14,9 @@ class MemoryBudget : public RefCounted {
 
 private:
 	std::atomic<size_t> _bytes{ 0 };
-	HashSet<uint64_t> _cache;
 	Ref<Mutex> _cache_mutex;
-	std::vector<Ref<Resource>> _pending_resources;
+	HashSet<Ref<Resource>> _pending_resources;
+	HashMap<ObjectID, size_t> _cache;
 
 	size_t _get_size(const Ref<Resource> &p_resource) const;
 

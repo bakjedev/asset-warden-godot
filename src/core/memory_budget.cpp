@@ -7,6 +7,8 @@
 #include "godot_cpp/classes/resource_loader.hpp"
 #include "godot_cpp/core/defs.hpp"
 #include "godot_cpp/core/mutex_lock.hpp"
+#include "godot_cpp/core/object.hpp"
+#include "godot_cpp/variant/utility_functions.hpp"
 
 using namespace godot;
 
@@ -66,34 +68,44 @@ void MemoryBudget::register_resource(const Ref<Resource> &p_resource) {
 		return;
 	}
 
-	auto instance_id = p_resource->get_instance_id();
-
 	MutexLock lock(*_cache_mutex.ptr());
-	if (_cache.has(instance_id)) {
+	if (_cache.has(ObjectID{ p_resource->get_instance_id() })) {
 		return;
 	}
 
-	_cache.insert(instance_id);
-
-	_pending_resources.push_back(p_resource);
+	_pending_resources.insert(p_resource);
 }
 
 void MemoryBudget::process_pending_resources(const int p_max) {
-	std::vector<Ref<Resource>> to_process;
+	Vector<Ref<Resource>> to_process;
 
 	{
 		MutexLock lock(*_cache_mutex.ptr());
 
 		auto count = MIN(_pending_resources.size(), p_max);
 
-		for (int i = 0; i < count; ++i) {
-			to_process.push_back(_pending_resources[i]);
+		auto it = _pending_resources.begin();
+		for (size_t i = 0; i < count && it != _pending_resources.end(); ++i, ++it) {
+			to_process.push_back(*it);
 		}
 
-		_pending_resources.erase(_pending_resources.begin(), _pending_resources.begin() + count);
+		for (const auto &res : to_process) {
+			_pending_resources.erase(res);
+		}
 	}
 
 	for (const auto &resource : to_process) {
-		_bytes += _get_size(resource);
+		auto size = _get_size(resource);
+		_bytes += size;
+		_cache.insert(ObjectID{ resource->get_instance_id() }, size);
+	}
+
+	for (auto it = _cache.begin(); it != _cache.end(); ++it) {
+		Object *obj = ObjectDB::get_instance(it->key);
+		if (!obj) {
+			_bytes -= it->value;
+			_cache.erase(it->key);
+			UtilityFunctions::print("ERASED OBJECT");
+		}
 	}
 }

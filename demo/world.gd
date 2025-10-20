@@ -1,6 +1,7 @@
 extends Node3D
 
 @export var load_button: Button
+@export var delete_button: Button
 @export var progress_slider: HSlider
 @export var label: Label
 
@@ -20,6 +21,9 @@ func _ready():
 	
 	if load_button:
 		load_button.pressed.connect(_on_load_button_pressed)
+		
+	if delete_button:
+		delete_button.pressed.connect(_on_delete_button_pressed)
 
 func test(resource: Resource):
 	var mesh = resource as Mesh
@@ -35,6 +39,11 @@ func test(resource: Resource):
 func done_loading(_resources: Array):
 	cancel = false
 	load_button.text = "Load"
+
+func _on_delete_button_pressed():
+	for child in get_children():
+		child.queue_free()
+	index = 0
 
 func _on_load_button_pressed():
 	if cancel:
