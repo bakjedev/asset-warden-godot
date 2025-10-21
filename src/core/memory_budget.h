@@ -2,8 +2,8 @@
 #include "godot_cpp/classes/mutex.hpp"
 #include "godot_cpp/core/object_id.hpp"
 #include "godot_cpp/templates/hash_map.hpp"
-#include "godot_cpp/templates/hash_set.hpp"
 #include "godot_cpp/variant/string.hpp"
+#include "godot_cpp/variant/string_name.hpp"
 #include <cstddef>
 #include <godot_cpp/classes/ref_counted.hpp>
 #include <godot_cpp/classes/resource.hpp>
@@ -19,14 +19,22 @@ private:
 		StringName type;
 	};
 
+	struct PendingEntry {
+		ObjectID id;
+		StringName type;
+		size_t estimated;
+	};
+
 	Ref<Mutex> _cache_mutex;
-	HashSet<Ref<Resource>> _pending_resources;
+	HashMap<StringName, size_t> _estimated;
+	Vector<PendingEntry> _pending_resources;
 	HashMap<ObjectID, CacheEntry> _cache;
 
 	HashMap<String, size_t> _budgets;
 	HashMap<String, size_t> _bytes;
 
 	size_t _get_size(const Ref<Resource> &p_resource) const;
+	size_t _get_estimated_size(const String &p_path) const;
 
 protected:
 	static void _bind_methods();

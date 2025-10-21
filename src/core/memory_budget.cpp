@@ -3,11 +3,13 @@
 #include "godot_cpp/classes/file_access.hpp"
 #include "godot_cpp/classes/image.hpp"
 #include "godot_cpp/classes/image_texture.hpp"
+#include "godot_cpp/classes/object.hpp"
 #include "godot_cpp/classes/ref.hpp"
 #include "godot_cpp/classes/resource_loader.hpp"
 #include "godot_cpp/core/defs.hpp"
 #include "godot_cpp/core/mutex_lock.hpp"
 #include "godot_cpp/core/object.hpp"
+#include "godot_cpp/core/object_id.hpp"
 #include "godot_cpp/variant/utility_functions.hpp"
 
 using namespace godot;
@@ -58,8 +60,23 @@ size_t MemoryBudget::_get_size(const Ref<Resource> &p_resource) const {
 	return 0;
 }
 
+size_t MemoryBudget::_get_estimated_size(const String &p_path) const {
+	if (p_path.is_empty() || !FileAccess::file_exists(p_path)) {
+		return 1024 * 1024;
+	}
+
+	auto file = FileAccess::open(p_path, FileAccess::READ);
+	if (!file.is_valid()) {
+		return 1024 * 1024;
+	}
+
+	size_t file_size = file->get_length() * 0.1f;
+	return file_size;
+}
+
 void MemoryBudget::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_mb", "type", "mb"), &MemoryBudget::set_budget);
+	ClassDB::bind_method(D_METHOD("process_pending_resources"), &MemoryBudget::process_pending_resources);
 }
 
 MemoryBudget::MemoryBudget() {
@@ -72,12 +89,28 @@ void MemoryBudget::register_resource(const Ref<Resource> &p_resource) {
 		return;
 	}
 
+	auto id = ObjectID{ p_resource->get_instance_id() };
+	auto type = p_resource->get_class();
+	auto estimated_size = _get_estimated_size(p_resource->get_path());
+
 	MutexLock lock(*_cache_mutex.ptr());
+
 	if (_cache.has(ObjectID{ p_resource->get_instance_id() })) {
 		return;
 	}
 
-	_pending_resources.insert(p_resource);
+	PendingEntry entry;
+	entry.id = id;
+	entry.type = type;
+	entry.estimated = estimated_size;
+
+	_pending_resources.push_back(entry);
+
+	if (_estimated.has(type)) {
+		_estimated[type] += estimated_size;
+	} else {
+		_estimated[type] = estimated_size;
+	}
 }
 
 size_t MemoryBudget::bytes(const String &p_type) const {
@@ -94,34 +127,61 @@ size_t MemoryBudget::bytes(const String &p_type) const {
 
 // this function will be run on the main thread
 void MemoryBudget::process_pending_resources(const int p_max) {
-	Vector<Ref<Resource>> to_process;
+	Vector<PendingEntry> to_process;
 
 	{
 		MutexLock lock(*_cache_mutex.ptr());
 
 		auto count = MIN(_pending_resources.size(), p_max);
 
+		to_process.resize(count);
+
 		auto it = _pending_resources.begin();
 		for (size_t i = 0; i < count; ++i, ++it) {
-			to_process.push_back(*it);
+			to_process.write[i] = *it;
 		}
 
-		for (const auto &res : to_process) {
-			_pending_resources.erase(res);
+		for (int i = count - 1; i >= 0; --i) {
+			_pending_resources.remove_at(i);
 		}
 	}
 
 	// out of lock cuz _get_size is heavy
-	HashMap<ObjectID, std::pair<size_t, String>> sizes_to_add;
-	for (const auto &resource : to_process) {
-		sizes_to_add.insert(ObjectID{ resource->get_instance_id() }, { _get_size(resource), resource->get_class() });
+	Vector<ObjectID> id_list;
+	Vector<StringName> type_list;
+	Vector<size_t> bytes_list;
+	Vector<size_t> estimated_list;
+	for (const auto &entry : to_process) {
+		auto obj = ObjectDB::get_instance(entry.id);
+		Ref<Resource> resource = Object::cast_to<Resource>(obj);
+
+		size_t size = _get_size(resource);
+
+		bytes_list.push_back(size);
+		id_list.push_back(entry.id);
+		type_list.push_back(entry.type);
+		estimated_list.push_back(entry.estimated);
 	}
 
 	{
 		MutexLock lock(*_cache_mutex.ptr());
-		for (const auto &[id, res] : sizes_to_add) {
-			_bytes[res.second] += res.first;
-			_cache.insert(id, { res.first, res.second });
+		for (int i = 0; i < id_list.size(); ++i) {
+			auto id = id_list[i];
+			auto type = type_list[i];
+			auto bytes = bytes_list[i];
+			auto estimated = estimated_list[i];
+
+			if (_estimated.has(type) && _estimated[type] >= estimated) {
+				_estimated[type] -= estimated;
+			}
+
+			if (_bytes.has(type)) {
+				_bytes[type] += bytes;
+			} else {
+				_bytes[type] = bytes;
+			}
+
+			_cache.insert(id, { bytes, type });
 		}
 
 		Vector<ObjectID> to_remove;
@@ -154,6 +214,7 @@ bool MemoryBudget::has_budget(const String &p_type) {
 
 	auto budget = _budgets[p_type];
 	auto current_bytes = _bytes.has(p_type) ? _bytes[p_type] : 0;
+	auto estimated = _estimated.has(p_type) ? _estimated[p_type] : 0;
 
-	return current_bytes <= budget;
+	return (current_bytes + estimated) <= budget;
 }
