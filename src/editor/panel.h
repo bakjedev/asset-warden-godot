@@ -10,9 +10,10 @@ class AssetWardenPanel : public VBoxContainer {
 	GDCLASS(AssetWardenPanel, VBoxContainer);
 
 private:
-	Label *_label = nullptr;
-	Label *_label_2 = nullptr;
-	AssetWardenGraph *_graph = nullptr;
+	Label *_request_label = nullptr;
+	AssetWardenGraph *_request_graph = nullptr;
+	Label *_bytes_label = nullptr;
+	AssetWardenGraph *_bytes_graph = nullptr;
 
 protected:
 	static void _bind_methods() {}
@@ -21,7 +22,9 @@ public:
 	AssetWardenPanel();
 	~AssetWardenPanel();
 
-	auto graph() { return _graph; }
-	auto label() { return _label; }
+	auto request_graph() { return _request_graph; }
+	auto bytes_graph() { return _bytes_graph; }
+	auto request_label() { return _request_label; }
+	auto bytes_label() { return _bytes_label; }
 };
 } //namespace godot

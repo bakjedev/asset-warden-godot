@@ -6,10 +6,13 @@ using namespace godot;
 void AssetWardenEditorPlugin::_on_debug_message(const String &id, const Array &data) {
 	if (id == "request_count") {
 		int request_count = data[0];
-		_panel->graph()->add_point(request_count);
+		_panel->request_graph()->add_point(request_count);
+		_panel->request_label()->set_text("Requests: " + String::num(request_count));
 	} else if (id == "bytes") {
 		size_t bytes = data[0];
-		_panel->label()->set_text(String::num(bytes));
+		auto mb = static_cast<float>(bytes) / 1000000.0f;
+		_panel->bytes_graph()->add_point(mb);
+		_panel->bytes_label()->set_text("MB: " + String::num(mb));
 	}
 }
 
@@ -37,6 +40,8 @@ void AssetWardenEditorPlugin::_enter_tree() {
 	_debug_receiver->on("bytes", Callable(this, "_on_debug_message"));
 
 	add_debugger_plugin(_debug_receiver->plugin());
+
+	_panel->bytes_graph()->set_scale_y(50, 120);
 }
 
 void AssetWardenEditorPlugin::_exit_tree() {
