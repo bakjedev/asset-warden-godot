@@ -80,6 +80,8 @@ public:
 	void cancel(uint64_t p_id);
 	void cancel_batch(uint64_t p_id);
 
+	Ref<MemoryBudget> get_budgets() const { return _memory_budget; }
+
 protected:
 	static void _bind_methods();
 

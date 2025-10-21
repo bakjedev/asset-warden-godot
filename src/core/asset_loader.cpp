@@ -264,7 +264,9 @@ void AssetLoader::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("cancel", "id"), &AssetLoader::cancel);
 	ClassDB::bind_method(D_METHOD("cancel_batch", "id"), &AssetLoader::cancel_batch);
 	ClassDB::bind_method(D_METHOD("_batch_item_load"), &AssetLoader::_batch_item_load);
-	ClassDB::bind_method(D_METHOD("set_budget", "type", "budget"), &MemoryBudget::set_budget);
+	ClassDB::bind_method(D_METHOD("get_budgets"), &AssetLoader::get_budgets);
+
+	ADD_PROPERTY(PropertyInfo(Variant::OBJECT, "budgets", PROPERTY_HINT_RESOURCE_TYPE, "MemoryBudget"), "", "get_budgets");
 
 	BIND_ENUM_CONSTANT(DIST_EQUAL);
 	BIND_ENUM_CONSTANT(DIST_CUSTOM);
@@ -304,6 +306,7 @@ void AssetLoader::_worker_thread_func(const StringName &p_type) {
 
 		LoadRequest request;
 		bool has_request = false;
+		auto actual_type = p_type;
 
 		{
 			MutexLock lock(*_queue_mutex.ptr());
@@ -317,6 +320,7 @@ void AssetLoader::_worker_thread_func(const StringName &p_type) {
 						request = load_queue.second.top();
 						load_queue.second.pop();
 						has_request = true;
+						actual_type = load_queue.first;
 						break;
 					}
 				}
@@ -331,6 +335,10 @@ void AssetLoader::_worker_thread_func(const StringName &p_type) {
 					continue;
 				}
 				_request_status[request.id] = STATUS_LOADING;
+			}
+			if (!_memory_budget->has_budget(actual_type)) {
+				_request_status.erase(request.id);
+				continue;
 			}
 			auto res = ResourceLoader::get_singleton()->load(request.path, request.type);
 

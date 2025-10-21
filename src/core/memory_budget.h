@@ -14,12 +14,17 @@ class MemoryBudget : public RefCounted {
 	GDCLASS(MemoryBudget, RefCounted)
 
 private:
-	std::atomic<size_t> _bytes{ 0 };
+	struct CacheEntry {
+		size_t bytes;
+		StringName type;
+	};
+
 	Ref<Mutex> _cache_mutex;
 	HashSet<Ref<Resource>> _pending_resources;
-	HashMap<ObjectID, size_t> _cache;
+	HashMap<ObjectID, CacheEntry> _cache;
 
 	HashMap<String, size_t> _budgets;
+	HashMap<String, size_t> _bytes;
 
 	size_t _get_size(const Ref<Resource> &p_resource) const;
 
@@ -31,11 +36,13 @@ public:
 
 	void register_resource(const Ref<Resource> &p_resource);
 
-	auto bytes() const { return _bytes.load(); }
+	size_t bytes(const String &p_type = "") const;
 
 	void process_pending_resources(int p_max = 5);
 
 	void set_budget(const String &p_type, size_t p_budget);
+
+	bool has_budget(const String &p_type);
 };
 
 } // namespace godot

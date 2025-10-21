@@ -58,7 +58,9 @@ size_t MemoryBudget::_get_size(const Ref<Resource> &p_resource) const {
 	return 0;
 }
 
-void MemoryBudget::_bind_methods() {}
+void MemoryBudget::_bind_methods() {
+	ClassDB::bind_method(D_METHOD("set_mb", "type", "mb"), &MemoryBudget::set_budget);
+}
 
 MemoryBudget::MemoryBudget() {
 	_cache_mutex.instantiate();
@@ -76,6 +78,18 @@ void MemoryBudget::register_resource(const Ref<Resource> &p_resource) {
 	}
 
 	_pending_resources.insert(p_resource);
+}
+
+size_t MemoryBudget::bytes(const String &p_type) const {
+	if (p_type.is_empty()) {
+		size_t bytes = 0;
+		for (const auto &type : _bytes) {
+			bytes += type.value;
+		}
+		return bytes;
+	}
+
+	return _bytes[p_type];
 }
 
 // this function will be run on the main thread
@@ -98,28 +112,29 @@ void MemoryBudget::process_pending_resources(const int p_max) {
 	}
 
 	// out of lock cuz _get_size is heavy
-	HashMap<ObjectID, size_t> sizes_to_add;
+	HashMap<ObjectID, std::pair<size_t, String>> sizes_to_add;
 	for (const auto &resource : to_process) {
-		sizes_to_add.insert(ObjectID{ resource->get_instance_id() }, _get_size(resource));
+		sizes_to_add.insert(ObjectID{ resource->get_instance_id() }, { _get_size(resource), resource->get_class() });
 	}
 
 	{
 		MutexLock lock(*_cache_mutex.ptr());
-		for (const auto &[id, size] : sizes_to_add) {
-			_bytes += size;
-			_cache.insert(id, size);
+		for (const auto &[id, res] : sizes_to_add) {
+			_bytes[res.second] += res.first;
+			_cache.insert(id, { res.first, res.second });
 		}
 
 		Vector<ObjectID> to_remove;
 		for (auto it = _cache.begin(); it != _cache.end(); ++it) {
 			Object *obj = ObjectDB::get_instance(it->key);
-			if (!obj) {
+			if (!obj || obj->is_queued_for_deletion()) {
 				to_remove.push_back(it->key);
 			}
 		}
 
 		for (const auto &key : to_remove) {
-			_bytes -= _cache[key];
+			const auto &entry = _cache[key];
+			_bytes[entry.type] -= entry.bytes;
 			_cache.erase(key);
 			UtilityFunctions::print("ERASED OBJECT");
 		}
@@ -127,5 +142,18 @@ void MemoryBudget::process_pending_resources(const int p_max) {
 }
 
 void MemoryBudget::set_budget(const String &p_type, const size_t p_budget) {
-	_budgets.insert(p_type, p_budget);
+	MutexLock lock(*_cache_mutex.ptr());
+	_budgets.insert(p_type, p_budget * 1000000);
+}
+
+bool MemoryBudget::has_budget(const String &p_type) {
+	MutexLock lock(*_cache_mutex.ptr());
+	if (!_budgets.has(p_type)) {
+		return true;
+	}
+
+	auto budget = _budgets[p_type];
+	auto current_bytes = _bytes.has(p_type) ? _bytes[p_type] : 0;
+
+	return current_bytes <= budget;
 }

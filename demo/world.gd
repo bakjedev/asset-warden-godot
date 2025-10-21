@@ -14,10 +14,12 @@ func _ready():
 	AssetLoader.initialize({
 		"distribution": AssetLoader.DIST_CUSTOM,
 		"pools": [
-			{"type": "mesh", "count": 2, "priority": Thread.PRIORITY_HIGH},
-			{"type": "texture", "count": 2, "priority": Thread.PRIORITY_NORMAL}
+			{"type": "ArrayMesh", "count": 2, "priority": Thread.PRIORITY_HIGH},
+			{"type": "Texture", "count": 2, "priority": Thread.PRIORITY_NORMAL}
 		]
 	})
+	
+	AssetLoader.budgets.set_mb("ArrayMesh", 41)
 	
 	
 	if load_button:
@@ -56,7 +58,7 @@ func _on_load_button_pressed():
 		var paths = []
 		for n in 256:
 			paths.append("res://sub100world/terrain_sub100_%d.obj" % n)
-		batch_id = AssetLoader.load_batch(paths, "mesh", Thread.PRIORITY_NORMAL, test, done_loading)
+		batch_id = AssetLoader.load_batch(paths, "ArrayMesh", Thread.PRIORITY_NORMAL, test, done_loading)
 		cancel = true
 
 func _process(_delta):
