@@ -344,6 +344,11 @@ void AssetLoader::_worker_thread_func(const StringName &p_type) {
 
 			{
 				MutexLock lock(*_cache_mutex.ptr());
+				if (_request_status[request.id] == STATUS_CANCELLED) { // check again because it might've been cancelled during loading
+					_request_status.erase(request.id);
+					continue;
+				}
+
 				if (res.is_valid()) {
 					_completed_loads[request.id] = res;
 					_request_status[request.id] = STATUS_LOADED;
@@ -429,4 +434,5 @@ void AssetLoaderNode::_physics_process(double delta) {
 
 	asset_loader->_debug_sender->send("request_count", request_count);
 	asset_loader->_debug_sender->send("bytes", asset_loader->_memory_budget->bytes());
+	asset_loader->_debug_sender->send("estimated", asset_loader->_memory_budget->estimated());
 }
