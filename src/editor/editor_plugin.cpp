@@ -13,6 +13,10 @@ void AssetWardenEditorPlugin::_on_debug_message(const String &id, const Array &d
 		auto mb = static_cast<float>(bytes) / 1000000.0f;
 		_panel->bytes_graph()->add_point(mb);
 		_panel->bytes_label()->set_text("MB: " + String::num(mb));
+	} else if (id == "estimated") {
+		size_t estimated = data[0];
+		auto mb = static_cast<float>(estimated) / 1000000.0f;
+		_panel->estimated_label()->set_text("Estimated: " + String::num(mb));
 	}
 }
 
@@ -37,6 +41,7 @@ void AssetWardenEditorPlugin::_enter_tree() {
 	_debug_receiver = DebugReceiver::create("bakjetest");
 
 	_debug_receiver->on("request_count", Callable(this, "_on_debug_message"));
+	_debug_receiver->on("estimated", Callable(this, "_on_debug_message"));
 	_debug_receiver->on("bytes", Callable(this, "_on_debug_message"));
 
 	add_debugger_plugin(_debug_receiver->plugin());

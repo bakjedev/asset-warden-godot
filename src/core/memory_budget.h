@@ -45,6 +45,7 @@ public:
 	void register_resource(const Ref<Resource> &p_resource);
 
 	size_t bytes(const String &p_type = "") const;
+	size_t estimated(const String &p_type = "") const;
 
 	void process_pending_resources(int p_max = 5);
 

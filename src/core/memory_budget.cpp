@@ -10,7 +10,7 @@
 #include "godot_cpp/core/mutex_lock.hpp"
 #include "godot_cpp/core/object.hpp"
 #include "godot_cpp/core/object_id.hpp"
-#include "godot_cpp/variant/utility_functions.hpp"
+#include "godot_cpp/templates/hash_set.hpp"
 
 using namespace godot;
 
@@ -125,6 +125,18 @@ size_t MemoryBudget::bytes(const String &p_type) const {
 	return _bytes[p_type];
 }
 
+size_t MemoryBudget::estimated(const String &p_type) const {
+	if (p_type.is_empty()) {
+		size_t estimated = 0;
+		for (const auto &type : _estimated) {
+			estimated += type.value;
+		}
+		return estimated;
+	}
+
+	return _estimated[p_type];
+}
+
 // this function will be run on the main thread
 void MemoryBudget::process_pending_resources(const int p_max) {
 	Vector<PendingEntry> to_process;
@@ -151,16 +163,17 @@ void MemoryBudget::process_pending_resources(const int p_max) {
 	Vector<StringName> type_list;
 	Vector<size_t> bytes_list;
 	Vector<size_t> estimated_list;
+	HashSet<int> pending_to_remove;
 	for (const auto &entry : to_process) {
 		auto obj = ObjectDB::get_instance(entry.id);
-		if (!obj) {
-			continue;
-		}
 		Ref<Resource> resource = Object::cast_to<Resource>(obj);
-		if (!resource.is_valid()) {
-			continue;
+
+		size_t size = 0;
+		if (!obj || !resource.is_valid()) {
+			pending_to_remove.insert(id_list.size());
+		} else {
+			size = _get_size(resource);
 		}
-		size_t size = _get_size(resource);
 
 		bytes_list.push_back(size);
 		id_list.push_back(entry.id);
@@ -178,6 +191,10 @@ void MemoryBudget::process_pending_resources(const int p_max) {
 
 			if (_estimated.has(type) && _estimated[type] >= estimated) {
 				_estimated[type] -= estimated;
+			}
+
+			if (pending_to_remove.has(i)) {
+				continue;
 			}
 
 			if (_bytes.has(type)) {

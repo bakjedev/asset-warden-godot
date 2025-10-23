@@ -14,6 +14,10 @@ AssetWardenPanel::AssetWardenPanel() {
 	_bytes_label->set_text("Bytes count");
 	add_child(_bytes_label);
 
+	_estimated_label = memnew(Label);
+	_estimated_label->set_text("Estimated: ");
+	add_child(_estimated_label);
+
 	_bytes_graph = memnew(AssetWardenGraph);
 	add_child(_bytes_graph);
 }
@@ -22,5 +26,6 @@ AssetWardenPanel::~AssetWardenPanel() {
 	_request_graph = nullptr;
 	_request_label = nullptr;
 	_bytes_label = nullptr;
+	_estimated_label = nullptr;
 	_bytes_graph = nullptr;
 }

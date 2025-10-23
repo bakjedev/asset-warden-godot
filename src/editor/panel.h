@@ -13,6 +13,7 @@ private:
 	Label *_request_label = nullptr;
 	AssetWardenGraph *_request_graph = nullptr;
 	Label *_bytes_label = nullptr;
+	Label *_estimated_label = nullptr;
 	AssetWardenGraph *_bytes_graph = nullptr;
 
 protected:
@@ -26,5 +27,6 @@ public:
 	auto bytes_graph() { return _bytes_graph; }
 	auto request_label() { return _request_label; }
 	auto bytes_label() { return _bytes_label; }
+	auto estimated_label() { return _estimated_label; }
 };
 } //namespace godot
