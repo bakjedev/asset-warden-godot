@@ -153,8 +153,13 @@ void MemoryBudget::process_pending_resources(const int p_max) {
 	Vector<size_t> estimated_list;
 	for (const auto &entry : to_process) {
 		auto obj = ObjectDB::get_instance(entry.id);
+		if (!obj) {
+			continue;
+		}
 		Ref<Resource> resource = Object::cast_to<Resource>(obj);
-
+		if (!resource.is_valid()) {
+			continue;
+		}
 		size_t size = _get_size(resource);
 
 		bytes_list.push_back(size);
@@ -196,7 +201,7 @@ void MemoryBudget::process_pending_resources(const int p_max) {
 			const auto &entry = _cache[key];
 			_bytes[entry.type] -= entry.bytes;
 			_cache.erase(key);
-			UtilityFunctions::print("ERASED OBJECT");
+			//UtilityFunctions::print("ERASED OBJECT");
 		}
 	}
 }
