@@ -114,14 +114,29 @@ uint64_t AssetLoader::load_batch(const Array &p_paths, const StringName &p_type,
 	batch.completed = 0;
 	batch.errors = false;
 
-	for (int i = 0; i < p_paths.size(); ++i) {
-		String path = p_paths[i];
+	{
+		MutexLock lock(*_queue_mutex.ptr());
 
-		auto batch_callback = callable_mp(this, &AssetLoader::_batch_item_load).bind(batch_id, p_callback);
+		for (int i = 0; i < p_paths.size(); ++i) {
+			String path = p_paths[i];
 
-		auto request_id = load(path, p_type, p_priority, batch_callback);
-		batch.request_ids.push_back(request_id);
+			auto batch_callback = callable_mp(this, &AssetLoader::_batch_item_load)
+										  .bind(batch_id, p_callback);
+
+			LoadRequest request{
+				_next_request_id++,
+				path,
+				p_priority,
+				p_type,
+				batch_callback
+			};
+
+			_asset_type_queues[p_type].push(request);
+			batch.request_ids.push_back(request.id);
+		}
 	}
+
+	_semaphore->post(p_paths.size());
 
 	{
 		MutexLock lock(*_batch_mutex.ptr());
