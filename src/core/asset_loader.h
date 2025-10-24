@@ -33,6 +33,7 @@ public:
 		Thread::Priority priority;
 		StringName type;
 		Callable callback;
+		bool part_of_batch;
 
 		bool operator<(const LoadRequest &other) const {
 			return (priority > other.priority);

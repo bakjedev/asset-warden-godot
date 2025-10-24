@@ -93,7 +93,7 @@ void AssetLoader::_shutdown() {
 }
 
 uint64_t AssetLoader::load(const String &p_path, const StringName &p_type, Thread::Priority p_priority, const Callable &p_callback) {
-	LoadRequest request{ _next_request_id++, p_path, p_priority, p_type, p_callback };
+	LoadRequest request{ _next_request_id++, p_path, p_priority, p_type, p_callback, false };
 
 	{
 		MutexLock lock(*_queue_mutex.ptr());
@@ -128,7 +128,8 @@ uint64_t AssetLoader::load_batch(const Array &p_paths, const StringName &p_type,
 				path,
 				p_priority,
 				p_type,
-				batch_callback
+				batch_callback,
+				true
 			};
 
 			_asset_type_queues[p_type].push(request);
@@ -241,7 +242,7 @@ float AssetLoader::progress_batch(uint64_t p_id) {
 
 void AssetLoader::cancel(uint64_t p_id) {
 	MutexLock cache_lock(*_cache_mutex.ptr());
-	_completed_loads.erase(p_id);
+	//_completed_loads.erase(p_id);
 	_request_status[p_id] = STATUS_CANCELLED;
 }
 
@@ -256,12 +257,12 @@ void AssetLoader::cancel_batch(uint64_t p_id) {
 	{
 		MutexLock cache_lock(*_cache_mutex.ptr());
 		for (auto request_id : batch.request_ids) {
-			_completed_loads.erase(request_id);
+			//_completed_loads.erase(request_id);
 			_request_status[request_id] = STATUS_CANCELLED;
 		}
 	}
 
-	_batches.erase(p_id);
+	//_batches.erase(p_id);
 }
 
 void AssetLoader::_bind_methods() {
@@ -345,17 +346,33 @@ void AssetLoader::_worker_thread_func(const StringName &p_type) {
 		if (has_request) {
 			{
 				MutexLock lock(*_cache_mutex.ptr());
-				if (_request_status[request.id] == STATUS_CANCELLED) {
-					_request_status.erase(request.id);
+				const auto &status = _request_status[request.id];
+				if (status == STATUS_CANCELLED) {
+					if (request.callback.is_valid()) {
+						request.callback.call_deferred(Ref<Resource>(), request.path, ERR_SKIP);
+					}
+					if (!request.part_of_batch) {
+						_request_status.erase(request.id);
+					}
 					continue;
 				}
-
-				if (!_memory_budget->has_budget(actual_type)) {
-					_request_status.erase(request.id);
-					continue;
-				}
-
 				_request_status[request.id] = STATUS_LOADING;
+			}
+
+			if (!_memory_budget->reserve_budget(actual_type, request.path)) {
+				{
+					MutexLock lock(*_cache_mutex.ptr());
+					_request_status[request.id] = STATUS_ERROR;
+				}
+
+				if (request.callback.is_valid()) {
+					request.callback.call_deferred(Ref<Resource>(), request.path, ERR_OUT_OF_MEMORY);
+				}
+
+				if (!request.part_of_batch) {
+					_request_status.erase(request.id);
+				}
+				continue;
 			}
 
 			auto res = ResourceLoader::get_singleton()->load(request.path, request.type);
@@ -363,19 +380,25 @@ void AssetLoader::_worker_thread_func(const StringName &p_type) {
 			{
 				MutexLock lock(*_cache_mutex.ptr());
 				if (_request_status[request.id] == STATUS_CANCELLED) { // check again because it might've been cancelled during loading
-					_request_status.erase(request.id);
+					_memory_budget->release_reservation(actual_type, request.path);
+					if (request.callback.is_valid()) {
+						request.callback.call_deferred(Ref<Resource>(), request.path, ERR_SKIP);
+					}
+					if (!request.part_of_batch) {
+						_request_status.erase(request.id);
+					}
 					continue;
 				}
 
 				if (res.is_valid()) {
 					_completed_loads[request.id] = res;
 					_request_status[request.id] = STATUS_LOADED;
+					_memory_budget->register_resource(res);
 				} else {
 					_request_status[request.id] = STATUS_ERROR;
+					_memory_budget->release_reservation(actual_type, request.path);
 				}
 			}
-
-			_memory_budget->register_resource(res);
 
 			if (request.callback.is_valid()) {
 				request.callback.call_deferred(res, request.path, res.is_valid() ? OK : ERR_FILE_NOT_FOUND);
@@ -415,9 +438,11 @@ void AssetLoader::_batch_item_load(Ref<Resource> p_resource, const String &p_pat
 		p_callback.call_deferred(p_resource);
 	}
 
-	if (batch_complete && batch_copy.callback.is_valid()) {
-		auto resources = get_batch(p_id);
-		batch_copy.callback.call_deferred(resources);
+	if (batch_complete) {
+		if (batch_copy.callback.is_valid()) {
+			auto resources = get_batch(p_id);
+			batch_copy.callback.call_deferred(resources);
+		}
 	}
 }
 

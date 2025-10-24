@@ -91,12 +91,22 @@ void MemoryBudget::register_resource(const Ref<Resource> &p_resource) {
 
 	auto id = ObjectID{ p_resource->get_instance_id() };
 	auto type = p_resource->get_class();
-	auto estimated_size = _get_estimated_size(p_resource->get_path());
+	auto path = p_resource->get_path();
+	auto estimated_size = _get_estimated_size(path);
 
 	MutexLock lock(*_cache_mutex.ptr());
 
 	if (_cache.has(ObjectID{ p_resource->get_instance_id() })) {
+		release_reservation(type, path);
 		return;
+	}
+
+	// check if already pending
+	for (const auto &entry : _pending_resources) {
+		if (entry.id == id) {
+			release_reservation(type, path);
+			return;
+		}
 	}
 
 	PendingEntry entry;
@@ -105,12 +115,6 @@ void MemoryBudget::register_resource(const Ref<Resource> &p_resource) {
 	entry.estimated = estimated_size;
 
 	_pending_resources.push_back(entry);
-
-	if (_estimated.has(type)) {
-		_estimated[type] += estimated_size;
-	} else {
-		_estimated[type] = estimated_size;
-	}
 }
 
 size_t MemoryBudget::bytes(const String &p_type) const {
@@ -151,6 +155,7 @@ void MemoryBudget::process_pending_resources(const int p_max) {
 		auto it = _pending_resources.begin();
 		for (size_t i = 0; i < count; ++i, ++it) {
 			to_process.write[i] = *it;
+			_cache.insert(it->id, { 0, it->type }); // add temporary
 		}
 
 		for (int i = count - 1; i >= 0; --i) {
@@ -194,8 +199,11 @@ void MemoryBudget::process_pending_resources(const int p_max) {
 			}
 
 			if (pending_to_remove.has(i)) {
+				_cache.erase(id); // remove temporary
 				continue;
 			}
+
+			_cache[id] = { bytes, type }; // update temporary to real
 
 			if (_bytes.has(type)) {
 				_bytes[type] += bytes;
@@ -203,7 +211,7 @@ void MemoryBudget::process_pending_resources(const int p_max) {
 				_bytes[type] = bytes;
 			}
 
-			_cache.insert(id, { bytes, type });
+			//_cache.insert(id, { bytes, type });
 		}
 
 		Vector<ObjectID> to_remove;
@@ -228,7 +236,7 @@ void MemoryBudget::set_budget(const String &p_type, const size_t p_budget) {
 	_budgets.insert(p_type, p_budget * 1000000);
 }
 
-bool MemoryBudget::has_budget(const String &p_type) {
+bool MemoryBudget::reserve_budget(const String &p_type, const String &p_path) {
 	MutexLock lock(*_cache_mutex.ptr());
 	if (!_budgets.has(p_type)) {
 		return true;
@@ -237,6 +245,23 @@ bool MemoryBudget::has_budget(const String &p_type) {
 	auto budget = _budgets[p_type];
 	auto current_bytes = _bytes.has(p_type) ? _bytes[p_type] : 0;
 	auto estimated = _estimated.has(p_type) ? _estimated[p_type] : 0;
+	auto estimated_size = _get_estimated_size(p_path);
 
-	return (current_bytes + estimated) <= budget;
+	if ((current_bytes + estimated + estimated_size) > budget) {
+		return false;
+	}
+
+	_estimated[p_type] = estimated + estimated_size;
+
+	return true;
+}
+
+void MemoryBudget::release_reservation(const String &p_type, const String &p_path) {
+	MutexLock lock(*_cache_mutex.ptr());
+
+	auto estimated_size = _get_estimated_size(p_path);
+
+	if (_estimated.has(p_type) && _estimated[p_type] >= estimated_size) {
+		_estimated[p_type] -= estimated_size;
+	}
 }

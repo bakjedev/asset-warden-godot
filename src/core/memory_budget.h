@@ -51,7 +51,8 @@ public:
 
 	void set_budget(const String &p_type, size_t p_budget);
 
-	bool has_budget(const String &p_type);
+	bool reserve_budget(const String &p_type, const String &p_path);
+	void release_reservation(const String &p_type, const String &p_path);
 };
 
 } // namespace godot

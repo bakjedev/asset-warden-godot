@@ -29,6 +29,8 @@ func _ready():
 		delete_button.pressed.connect(_on_delete_button_pressed)
 
 func test(resource: Resource):
+	if (!is_instance_valid(resource)):
+		return
 	var mesh = resource as Mesh
 	var mesh_instance = MeshInstance3D.new()
 	mesh_instance.mesh = mesh
