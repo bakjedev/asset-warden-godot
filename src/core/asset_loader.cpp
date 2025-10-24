@@ -349,12 +349,15 @@ void AssetLoader::_worker_thread_func(const StringName &p_type) {
 					_request_status.erase(request.id);
 					continue;
 				}
+
+				if (!_memory_budget->has_budget(actual_type)) {
+					_request_status.erase(request.id);
+					continue;
+				}
+
 				_request_status[request.id] = STATUS_LOADING;
 			}
-			if (!_memory_budget->has_budget(actual_type)) {
-				_request_status.erase(request.id);
-				continue;
-			}
+
 			auto res = ResourceLoader::get_singleton()->load(request.path, request.type);
 
 			{
