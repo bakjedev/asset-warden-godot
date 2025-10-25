@@ -28,7 +28,7 @@ private:
 		SizeState size_state;
 	};
 
-	Ref<Mutex> _cache_mutex;
+	Ref<Mutex> _budget_mutex;
 	HashMap<uint64_t, ResourceEntry> _resources;
 
 	HashMap<String, size_t> _budgets;

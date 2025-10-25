@@ -78,7 +78,7 @@ void MemoryBudget::_bind_methods() {
 }
 
 MemoryBudget::MemoryBudget() {
-	_cache_mutex.instantiate();
+	_budget_mutex.instantiate();
 }
 
 // this function will be called from separate worker threads.
@@ -92,7 +92,7 @@ void MemoryBudget::register_resource(const Ref<Resource> &p_resource) {
 	auto path = p_resource->get_path();
 	auto estimated_size = _get_estimated_size(path);
 
-	MutexLock lock(*_cache_mutex.ptr());
+	MutexLock lock(*_budget_mutex.ptr());
 
 	if (_resources.has(p_resource->get_instance_id())) {
 		release_reservation(type, path);
@@ -145,7 +145,7 @@ void MemoryBudget::process_pending_resources(const int p_max) {
 
 	Vector<ProcessEntry> to_process;
 	{
-		MutexLock lock(*_cache_mutex.ptr());
+		MutexLock lock(*_budget_mutex.ptr());
 
 		for (const auto &[id, entry] : _resources) {
 			if (entry.size_state == ResourceEntry::SizeState::ESTIMATED) {
@@ -174,7 +174,7 @@ void MemoryBudget::process_pending_resources(const int p_max) {
 	}
 
 	{
-		MutexLock lock(*_cache_mutex.ptr());
+		MutexLock lock(*_budget_mutex.ptr());
 		for (const ProcessEntry &proc : to_process) {
 			if (!_resources.has(proc.id)) {
 				continue;
@@ -205,7 +205,7 @@ void MemoryBudget::process_pending_resources(const int p_max) {
 	if (_remove_counter >= _remove_interval) {
 		_remove_counter = 0;
 
-		MutexLock lock(*_cache_mutex.ptr());
+		MutexLock lock(*_budget_mutex.ptr());
 
 		Vector<uint64_t> to_remove;
 		for (auto it = _resources.begin(); it != _resources.end(); ++it) {
@@ -232,12 +232,12 @@ void MemoryBudget::process_pending_resources(const int p_max) {
 }
 
 void MemoryBudget::set_budget(const String &p_type, const size_t p_budget) {
-	MutexLock lock(*_cache_mutex.ptr());
+	MutexLock lock(*_budget_mutex.ptr());
 	_budgets.insert(p_type, p_budget * 1000000);
 }
 
 bool MemoryBudget::reserve_budget(const String &p_type, const String &p_path) {
-	MutexLock lock(*_cache_mutex.ptr());
+	MutexLock lock(*_budget_mutex.ptr());
 	if (!_budgets.has(p_type)) {
 		return true;
 	}
@@ -257,7 +257,7 @@ bool MemoryBudget::reserve_budget(const String &p_type, const String &p_path) {
 }
 
 void MemoryBudget::release_reservation(const String &p_type, const String &p_path) {
-	MutexLock lock(*_cache_mutex.ptr());
+	MutexLock lock(*_budget_mutex.ptr());
 
 	auto estimated_size = _get_estimated_size(p_path);
 
