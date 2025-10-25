@@ -29,11 +29,14 @@ private:
 	};
 
 	Ref<Mutex> _cache_mutex;
-	HashMap<StringName, size_t> _estimated;
 	HashMap<uint64_t, ResourceEntry> _resources;
 
 	HashMap<String, size_t> _budgets;
 	HashMap<String, size_t> _sizes;
+	HashMap<StringName, size_t> _estimated;
+
+	int _remove_counter = 0;
+	const int _remove_interval = 60;
 
 	size_t _get_size(const Ref<Resource> &p_resource) const;
 	size_t _get_estimated_size(const String &p_path) const;

@@ -199,6 +199,13 @@ void MemoryBudget::process_pending_resources(const int p_max) {
 				_sizes[proc.type] = proc.size;
 			}
 		}
+	}
+
+	_remove_counter++;
+	if (_remove_counter >= _remove_interval) {
+		_remove_counter = 0;
+
+		MutexLock lock(*_cache_mutex.ptr());
 
 		Vector<uint64_t> to_remove;
 		for (auto it = _resources.begin(); it != _resources.end(); ++it) {
@@ -220,7 +227,6 @@ void MemoryBudget::process_pending_resources(const int p_max) {
 				}
 			}
 			_resources.erase(key);
-			//UtilityFunctions::print("ERASED OBJECT");
 		}
 	}
 }
