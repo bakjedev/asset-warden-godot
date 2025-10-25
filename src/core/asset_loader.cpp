@@ -476,6 +476,6 @@ void AssetLoaderNode::_physics_process(double delta) {
 	}
 
 	asset_loader->_debug_sender->send("request_count", request_count);
-	asset_loader->_debug_sender->send("bytes", asset_loader->_memory_budget->bytes());
+	asset_loader->_debug_sender->send("bytes", asset_loader->_memory_budget->sizes());
 	asset_loader->_debug_sender->send("estimated", asset_loader->_memory_budget->estimated());
 }

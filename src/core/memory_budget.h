@@ -14,24 +14,26 @@ class MemoryBudget : public RefCounted {
 	GDCLASS(MemoryBudget, RefCounted)
 
 private:
-	struct CacheEntry {
-		size_t bytes;
-		StringName type;
-	};
+	struct ResourceEntry {
+		enum SizeState {
+			ESTIMATED,
+			KNOWN
+		};
 
-	struct PendingEntry {
 		ObjectID id;
 		StringName type;
-		size_t estimated;
+		String path;
+		size_t size;
+		size_t estimated_size;
+		SizeState size_state;
 	};
 
 	Ref<Mutex> _cache_mutex;
 	HashMap<StringName, size_t> _estimated;
-	Vector<PendingEntry> _pending_resources;
-	HashMap<ObjectID, CacheEntry> _cache;
+	HashMap<uint64_t, ResourceEntry> _resources;
 
 	HashMap<String, size_t> _budgets;
-	HashMap<String, size_t> _bytes;
+	HashMap<String, size_t> _sizes;
 
 	size_t _get_size(const Ref<Resource> &p_resource) const;
 	size_t _get_estimated_size(const String &p_path) const;
@@ -44,7 +46,7 @@ public:
 
 	void register_resource(const Ref<Resource> &p_resource);
 
-	size_t bytes(const String &p_type = "") const;
+	size_t sizes(const String &p_type = "") const;
 	size_t estimated(const String &p_type = "") const;
 
 	void process_pending_resources(int p_max = 5);

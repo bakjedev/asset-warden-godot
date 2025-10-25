@@ -6,11 +6,9 @@
 #include "godot_cpp/classes/object.hpp"
 #include "godot_cpp/classes/ref.hpp"
 #include "godot_cpp/classes/resource_loader.hpp"
-#include "godot_cpp/core/defs.hpp"
 #include "godot_cpp/core/mutex_lock.hpp"
 #include "godot_cpp/core/object.hpp"
 #include "godot_cpp/core/object_id.hpp"
-#include "godot_cpp/templates/hash_set.hpp"
 
 using namespace godot;
 
@@ -96,37 +94,31 @@ void MemoryBudget::register_resource(const Ref<Resource> &p_resource) {
 
 	MutexLock lock(*_cache_mutex.ptr());
 
-	if (_cache.has(ObjectID{ p_resource->get_instance_id() })) {
+	if (_resources.has(p_resource->get_instance_id())) {
 		release_reservation(type, path);
 		return;
 	}
 
-	// check if already pending
-	for (const auto &entry : _pending_resources) {
-		if (entry.id == id) {
-			release_reservation(type, path);
-			return;
-		}
-	}
-
-	PendingEntry entry;
+	ResourceEntry entry;
 	entry.id = id;
 	entry.type = type;
-	entry.estimated = estimated_size;
+	entry.path = path;
+	entry.size_state = ResourceEntry::SizeState::ESTIMATED;
+	entry.estimated_size = estimated_size;
 
-	_pending_resources.push_back(entry);
+	_resources.insert(id, entry);
 }
 
-size_t MemoryBudget::bytes(const String &p_type) const {
+size_t MemoryBudget::sizes(const String &p_type) const {
 	if (p_type.is_empty()) {
 		size_t bytes = 0;
-		for (const auto &type : _bytes) {
+		for (const auto &type : _sizes) {
 			bytes += type.value;
 		}
 		return bytes;
 	}
 
-	return _bytes[p_type];
+	return _sizes[p_type];
 }
 
 size_t MemoryBudget::estimated(const String &p_type) const {
@@ -143,79 +135,73 @@ size_t MemoryBudget::estimated(const String &p_type) const {
 
 // this function will be run on the main thread
 void MemoryBudget::process_pending_resources(const int p_max) {
-	Vector<PendingEntry> to_process;
+	struct ProcessEntry {
+		uint64_t id;
+		StringName type;
+		size_t size;
+		size_t estimated_size;
+		bool valid;
+	};
 
+	Vector<ProcessEntry> to_process;
 	{
 		MutexLock lock(*_cache_mutex.ptr());
 
-		auto count = MIN(_pending_resources.size(), p_max);
+		for (const auto &[id, entry] : _resources) {
+			if (entry.size_state == ResourceEntry::SizeState::ESTIMATED) {
+				ProcessEntry process;
+				process.id = id;
+				process.type = entry.type;
+				process.estimated_size = entry.estimated_size;
 
-		to_process.resize(count);
-
-		auto it = _pending_resources.begin();
-		for (size_t i = 0; i < count; ++i, ++it) {
-			to_process.write[i] = *it;
-			_cache.insert(it->id, { 0, it->type }); // add temporary
-		}
-
-		for (int i = count - 1; i >= 0; --i) {
-			_pending_resources.remove_at(i);
+				to_process.push_back(process);
+				if (to_process.size() >= p_max) {
+					break;
+				}
+			}
 		}
 	}
 
-	// out of lock cuz _get_size is heavy
-	Vector<ObjectID> id_list;
-	Vector<StringName> type_list;
-	Vector<size_t> bytes_list;
-	Vector<size_t> estimated_list;
-	HashSet<int> pending_to_remove;
-	for (const auto &entry : to_process) {
-		auto obj = ObjectDB::get_instance(entry.id);
+	for (int i = 0; i < to_process.size(); ++i) {
+		auto obj = ObjectDB::get_instance(to_process[i].id);
 		Ref<Resource> resource = Object::cast_to<Resource>(obj);
 
-		size_t size = 0;
-		if (!obj || !resource.is_valid()) {
-			pending_to_remove.insert(id_list.size());
-		} else {
-			size = _get_size(resource);
-		}
+		to_process.write[i].valid = (obj && resource.is_valid());
 
-		bytes_list.push_back(size);
-		id_list.push_back(entry.id);
-		type_list.push_back(entry.type);
-		estimated_list.push_back(entry.estimated);
+		if (to_process[i].valid) {
+			to_process.write[i].size = _get_size(resource);
+		}
 	}
 
 	{
 		MutexLock lock(*_cache_mutex.ptr());
-		for (int i = 0; i < id_list.size(); ++i) {
-			auto id = id_list[i];
-			auto type = type_list[i];
-			auto bytes = bytes_list[i];
-			auto estimated = estimated_list[i];
-
-			if (_estimated.has(type) && _estimated[type] >= estimated) {
-				_estimated[type] -= estimated;
-			}
-
-			if (pending_to_remove.has(i)) {
-				_cache.erase(id); // remove temporary
+		for (const ProcessEntry &proc : to_process) {
+			if (!_resources.has(proc.id)) {
 				continue;
 			}
 
-			_cache[id] = { bytes, type }; // update temporary to real
-
-			if (_bytes.has(type)) {
-				_bytes[type] += bytes;
-			} else {
-				_bytes[type] = bytes;
+			if (_estimated.has(proc.type) && _estimated[proc.type] >= proc.estimated_size) {
+				_estimated[proc.type] -= proc.estimated_size;
 			}
 
-			//_cache.insert(id, { bytes, type });
+			if (!proc.valid) {
+				_resources.erase(proc.id);
+				continue;
+			}
+
+			ResourceEntry &entry = _resources[proc.id];
+			entry.size = proc.size;
+			entry.size_state = ResourceEntry::SizeState::KNOWN;
+
+			if (_sizes.has(proc.type)) {
+				_sizes[proc.type] += proc.size;
+			} else {
+				_sizes[proc.type] = proc.size;
+			}
 		}
 
-		Vector<ObjectID> to_remove;
-		for (auto it = _cache.begin(); it != _cache.end(); ++it) {
+		Vector<uint64_t> to_remove;
+		for (auto it = _resources.begin(); it != _resources.end(); ++it) {
 			Object *obj = ObjectDB::get_instance(it->key);
 			if (!obj || obj->is_queued_for_deletion()) {
 				to_remove.push_back(it->key);
@@ -223,9 +209,17 @@ void MemoryBudget::process_pending_resources(const int p_max) {
 		}
 
 		for (const auto &key : to_remove) {
-			const auto &entry = _cache[key];
-			_bytes[entry.type] -= entry.bytes;
-			_cache.erase(key);
+			const auto &entry = _resources[key];
+			if (entry.size_state == ResourceEntry::SizeState::ESTIMATED) {
+				if (_estimated.has(entry.type) && _estimated[entry.type] >= entry.estimated_size) {
+					_estimated[entry.type] -= entry.estimated_size;
+				}
+			} else if (entry.size_state == ResourceEntry::SizeState::KNOWN) {
+				if (_sizes.has(entry.type) && _sizes[entry.type] >= entry.size) {
+					_sizes[entry.type] -= entry.size;
+				}
+			}
+			_resources.erase(key);
 			//UtilityFunctions::print("ERASED OBJECT");
 		}
 	}
@@ -243,7 +237,7 @@ bool MemoryBudget::reserve_budget(const String &p_type, const String &p_path) {
 	}
 
 	auto budget = _budgets[p_type];
-	auto current_bytes = _bytes.has(p_type) ? _bytes[p_type] : 0;
+	auto current_bytes = _sizes.has(p_type) ? _sizes[p_type] : 0;
 	auto estimated = _estimated.has(p_type) ? _estimated[p_type] : 0;
 	auto estimated_size = _get_estimated_size(p_path);
 
