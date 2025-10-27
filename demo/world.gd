@@ -19,7 +19,7 @@ func _ready():
 		]
 	})
 	
-	AssetLoader.budgets.set_mb("ArrayMesh", 100)
+	AssetLoader.budgets.set_mb("ArrayMesh", 200)
 	
 	
 	if load_button:

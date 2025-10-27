@@ -107,6 +107,24 @@ void AssetWardenGraph::add_point(float p_value) {
 	_points.emplace_back(_next_pos, p_value);
 	_next_pos += 0.1f;
 	set_scale_x(_next_pos, 50.0f);
+
+	if (!_points.empty()) {
+		float min_value = _points[0].y;
+		float max_value = _points[0].y;
+
+		for (const auto &point : _points) {
+			min_value = std::min(min_value, point.y);
+			max_value = std::max(max_value, point.y);
+		}
+		float center = (min_value + max_value) / 2.0f;
+		float range = (max_value - min_value) * 1.5f;
+
+		if (range < 50.0f) {
+			range = 50.0f;
+		}
+
+		set_scale_y(center, range);
+	}
 }
 
 void AssetWardenGraph::clear_points() {
