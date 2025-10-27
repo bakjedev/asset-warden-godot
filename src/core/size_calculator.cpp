@@ -4,53 +4,53 @@
 
 using namespace godot;
 
-size_t SizeCalculator::packed_int32_array(size_t size) {
-	return ARRAY_SIZE + (size * sizeof(int32_t));
+size_t SizeCalculator::packed_int32_array(size_t p_size) {
+	return ARRAY_SIZE + (p_size * sizeof(int32_t));
 }
 
-size_t SizeCalculator::packed_float32_array(size_t size) {
-	return ARRAY_SIZE + (size * sizeof(float));
+size_t SizeCalculator::packed_float32_array(size_t p_size) {
+	return ARRAY_SIZE + (p_size * sizeof(float));
 }
 
-size_t SizeCalculator::packed_vector2_array(size_t size) {
-	return ARRAY_SIZE + (size * sizeof(float) * 2);
+size_t SizeCalculator::packed_vector2_array(size_t p_size) {
+	return ARRAY_SIZE + (p_size * sizeof(float) * 2);
 }
 
-size_t SizeCalculator::packed_vector3_array(size_t size) {
-	return ARRAY_SIZE + (size * sizeof(float) * 3);
+size_t SizeCalculator::packed_vector3_array(size_t p_size) {
+	return ARRAY_SIZE + (p_size * sizeof(float) * 3);
 }
 
-size_t SizeCalculator::packed_color_array(size_t size) {
-	return ARRAY_SIZE + (size * sizeof(float) * 4);
+size_t SizeCalculator::packed_color_array(size_t p_size) {
+	return ARRAY_SIZE + (p_size * sizeof(float) * 4);
 }
 
-size_t SizeCalculator::image(const Ref<Image> &image) {
-	if (image.is_null()) {
+size_t SizeCalculator::image(const Ref<Image> &p_image) {
+	if (p_image.is_null()) {
 		return 0;
 	}
 
-	return image_data(image->get_width(), image->get_height(), image->get_format(), image->has_mipmaps());
+	return image_data(p_image->get_width(), p_image->get_height(), p_image->get_format(), p_image->has_mipmaps());
 }
 
-size_t SizeCalculator::image_data(int width, int height, Image::Format format, bool mipmaps) {
-	if (width <= 0 || height <= 0) {
+size_t SizeCalculator::image_data(int p_width, int p_height, Image::Format p_format, bool p_mipmaps) {
+	if (p_width <= 0 || p_height <= 0) {
 		return 0;
 	}
 
-	auto pixel_size = pixel(format);
-	size_t size = static_cast<size_t>(width * height * pixel_size);
+	auto pixel_size = pixel(p_format);
+	size_t size = static_cast<size_t>(p_width * p_height * pixel_size);
 
 	size_t total = REFCOUNTED_SIZE + sizeof(Image) + size;
 
-	if (mipmaps) {
+	if (p_mipmaps) {
 		total += (size / 3);
 	}
 
 	return total;
 }
 
-float SizeCalculator::pixel(Image::Format format) { // https://github.com/godotengine/godot/blob/master/core/io/image.cpp#L132
-	switch (format) {
+float SizeCalculator::pixel(Image::Format p_format) { // https://github.com/godotengine/godot/blob/master/core/io/image.cpp#L132
+	switch (p_format) {
 		case Image::FORMAT_L8:
 			return 1;
 		case Image::FORMAT_LA8:
@@ -134,19 +134,19 @@ float SizeCalculator::pixel(Image::Format format) { // https://github.com/godote
 	}
 }
 
-size_t SizeCalculator::texture2d(const Ref<Texture2D> &texture) {
-	if (texture.is_null()) {
+size_t SizeCalculator::texture2d(const Ref<Texture2D> &p_texture) {
+	if (p_texture.is_null()) {
 		return 0;
 	}
 
 	size_t size = REFCOUNTED_SIZE + sizeof(Texture2D);
 
-	auto width = texture->get_width();
-	auto height = texture->get_height();
+	auto width = p_texture->get_width();
+	auto height = p_texture->get_height();
 
 	auto format = Image::FORMAT_RGBA8; // assume rgba8 by default
 	auto has_mipmaps = false;
-	auto image = texture->get_image();
+	auto image = p_texture->get_image();
 	if (image.is_valid()) {
 		format = image->get_format();
 		has_mipmaps = image->has_mipmaps();
@@ -157,15 +157,15 @@ size_t SizeCalculator::texture2d(const Ref<Texture2D> &texture) {
 	return size + data;
 }
 
-size_t SizeCalculator::array_mesh(const Ref<ArrayMesh> &mesh) {
-	if (mesh.is_null()) {
+size_t SizeCalculator::array_mesh(const Ref<ArrayMesh> &p_mesh) {
+	if (p_mesh.is_null()) {
 		return 0;
 	}
 
 	size_t total = REFCOUNTED_SIZE + sizeof(ArrayMesh);
 
-	for (int i = 0; i < mesh->get_surface_count(); i++) {
-		Array arrays = mesh->surface_get_arrays(i);
+	for (int i = 0; i < p_mesh->get_surface_count(); i++) {
+		Array arrays = p_mesh->surface_get_arrays(i);
 
 		if (arrays.size() > 0) {
 			// vertices
@@ -227,34 +227,34 @@ size_t SizeCalculator::array_mesh(const Ref<ArrayMesh> &mesh) {
 	return total;
 }
 
-size_t SizeCalculator::audio_stream_wav(const Ref<AudioStreamWAV> &audio) {
-	if (audio.is_null()) {
+size_t SizeCalculator::audio_stream_wav(const Ref<AudioStreamWAV> &p_audio) {
+	if (p_audio.is_null()) {
 		return 0;
 	}
 
-	auto data = audio->get_data();
+	auto data = p_audio->get_data();
 	return REFCOUNTED_SIZE + sizeof(AudioStreamWAV) + data.size();
 }
 
-size_t SizeCalculator::calculate_resource(const Ref<Resource> &resource) {
-	if (resource.is_null()) {
+size_t SizeCalculator::calculate_resource(const Ref<Resource> &p_resource) {
+	if (p_resource.is_null()) {
 		return 0;
 	}
 
-	if (resource->is_class("Image")) {
-		return image(Object::cast_to<Image>(resource.ptr()));
+	if (p_resource->is_class("Image")) {
+		return image(Object::cast_to<Image>(p_resource.ptr()));
 	}
 
-	if (resource->is_class("Texture") || resource->is_class("Texture2D")) {
-		return texture2d(Object::cast_to<Texture2D>(resource.ptr()));
+	if (p_resource->is_class("Texture") || p_resource->is_class("Texture2D")) {
+		return texture2d(Object::cast_to<Texture2D>(p_resource.ptr()));
 	}
 
-	if (resource->is_class("ArrayMesh")) {
-		return array_mesh(Object::cast_to<ArrayMesh>(resource.ptr()));
+	if (p_resource->is_class("ArrayMesh")) {
+		return array_mesh(Object::cast_to<ArrayMesh>(p_resource.ptr()));
 	}
 
-	if (resource->is_class("AudioStreamWAV")) {
-		return audio_stream_wav(Object::cast_to<AudioStreamWAV>(resource.ptr()));
+	if (p_resource->is_class("AudioStreamWAV")) {
+		return audio_stream_wav(Object::cast_to<AudioStreamWAV>(p_resource.ptr()));
 	}
 
 	return REFCOUNTED_SIZE + 256;
