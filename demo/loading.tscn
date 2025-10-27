@@ -56,11 +56,15 @@ offset_bottom = 174.0
 text = "tesxxxx"
 
 [node name="DeleteButton" type="Button" parent="Control"]
-layout_mode = 0
-offset_left = 1747.0
-offset_top = -33.0
-offset_right = 1848.0
-offset_bottom = 7.0
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -152.0
+offset_top = -32.0
+offset_right = -51.0
+offset_bottom = 8.0
+grow_horizontal = 0
 text = "DELETE"
 
 [node name="CSGBox3D" type="CSGBox3D" parent="."]
