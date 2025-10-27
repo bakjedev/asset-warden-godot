@@ -1,76 +1,14 @@
 #include "memory_budget.h"
-#include "godot_cpp/classes/array_mesh.hpp"
-#include "godot_cpp/classes/file_access.hpp"
 #include "godot_cpp/classes/image.hpp"
-#include "godot_cpp/classes/image_texture.hpp"
 #include "godot_cpp/classes/object.hpp"
 #include "godot_cpp/classes/ref.hpp"
 #include "godot_cpp/classes/resource_loader.hpp"
 #include "godot_cpp/core/mutex_lock.hpp"
 #include "godot_cpp/core/object.hpp"
 #include "godot_cpp/core/object_id.hpp"
+#include "size_calculator.h"
 
 using namespace godot;
-
-size_t MemoryBudget::_get_size(const Ref<Resource> &p_resource) const {
-	//scuffed size estimation for resources.
-	auto class_name = p_resource->get_class();
-
-	if (class_name == "Image") {
-		Ref<Image> image = p_resource;
-		return image->get_data().size();
-	}
-
-	if (class_name == "ImageTexture") {
-		Ref<ImageTexture> image_texture = p_resource;
-		auto img = image_texture->get_image();
-		if (img.is_valid()) {
-			return img->get_data().size();
-		}
-	}
-
-	if (class_name == "ArrayMesh") {
-		size_t total = 0;
-		Ref<ArrayMesh> array_mesh = p_resource;
-		for (int i = 0; i < array_mesh->get_surface_count(); ++i) {
-			auto arrays = array_mesh->surface_get_arrays(i);
-			for (int j = 0; j < arrays.size(); j++) {
-				if (arrays[j].get_type() == Variant::PACKED_BYTE_ARRAY) {
-					total += PackedByteArray(arrays[j]).size();
-				} else if (arrays[j].get_type() == Variant::PACKED_VECTOR3_ARRAY) {
-					total += PackedVector3Array(arrays[j]).size() * sizeof(Vector3);
-				} else if (arrays[j].get_type() == Variant::PACKED_VECTOR2_ARRAY) {
-					total += PackedVector2Array(arrays[j]).size() * sizeof(Vector2);
-				}
-			}
-		}
-		return total;
-	}
-
-	const auto &path = p_resource->get_path();
-	if (!path.is_empty() && FileAccess::file_exists(path)) {
-		auto file = FileAccess::open(path, FileAccess::READ);
-		if (file.is_valid()) {
-			return file->get_length();
-		}
-	}
-
-	return 0;
-}
-
-size_t MemoryBudget::_get_estimated_size(const String &p_path) const {
-	if (p_path.is_empty() || !FileAccess::file_exists(p_path)) {
-		return 1024 * 1024;
-	}
-
-	auto file = FileAccess::open(p_path, FileAccess::READ);
-	if (!file.is_valid()) {
-		return 1024 * 1024;
-	}
-
-	size_t file_size = file->get_length() * 0.1f;
-	return file_size;
-}
 
 void MemoryBudget::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_mb", "type", "mb"), &MemoryBudget::set_budget);
@@ -90,7 +28,7 @@ void MemoryBudget::register_resource(const Ref<Resource> &p_resource) {
 	auto id = ObjectID{ p_resource->get_instance_id() };
 	auto type = p_resource->get_class();
 	auto path = p_resource->get_path();
-	auto estimated_size = _get_estimated_size(path);
+	auto estimated_size = SizeCalculator::estimate_resource(path);
 
 	MutexLock lock(*_budget_mutex.ptr());
 
@@ -169,7 +107,7 @@ void MemoryBudget::process_pending_resources(const int p_max) {
 		to_process.write[i].valid = (obj && resource.is_valid());
 
 		if (to_process[i].valid) {
-			to_process.write[i].size = _get_size(resource);
+			to_process.write[i].size = SizeCalculator::calculate_resource(resource);
 		}
 	}
 
@@ -245,7 +183,7 @@ bool MemoryBudget::reserve_budget(const String &p_type, const String &p_path) {
 	auto budget = _budgets[p_type];
 	auto current_bytes = _sizes.has(p_type) ? _sizes[p_type] : 0;
 	auto estimated = _estimated.has(p_type) ? _estimated[p_type] : 0;
-	auto estimated_size = _get_estimated_size(p_path);
+	auto estimated_size = SizeCalculator::estimate_resource(p_path);
 
 	if ((current_bytes + estimated + estimated_size) > budget) {
 		return false;
@@ -259,7 +197,7 @@ bool MemoryBudget::reserve_budget(const String &p_type, const String &p_path) {
 void MemoryBudget::release_reservation(const String &p_type, const String &p_path) {
 	MutexLock lock(*_budget_mutex.ptr());
 
-	auto estimated_size = _get_estimated_size(p_path);
+	auto estimated_size = SizeCalculator::estimate_resource(p_path);
 
 	if (_estimated.has(p_type) && _estimated[p_type] >= estimated_size) {
 		_estimated[p_type] -= estimated_size;

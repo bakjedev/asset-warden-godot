@@ -38,9 +38,6 @@ private:
 	int _remove_counter = 0;
 	const int _remove_interval = 60;
 
-	size_t _get_size(const Ref<Resource> &p_resource) const;
-	size_t _get_estimated_size(const String &p_path) const;
-
 protected:
 	static void _bind_methods();
 
