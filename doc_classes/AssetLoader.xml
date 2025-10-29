@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="AssetLoader" inherits="Object"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/godotengine/godot/master/doc/class.xsd">
+	<brief_description>
+		Asset loader that manages multi-threaded background loading of assets with memory budgets and priority queues.
+	</brief_description>
+	<description>
+		AssetLoader adds a multi-threaded asset loading system similar to Godot's background loading. But with improved functionality and configurability. It manages worker threads, priority queues, and memory budgets.
+		
+		-Multi-threaded loading with configurable worker thread pools
+		-Priority based queue system for managing load order
+		-Batch loading with progress tracking
+		-Memory budget enforcement
+		-Cancellable load requests
+		-Type specific thread pools for different asset types
+
+		Basic usage:
+		[codeblock]
+		# Initialize with configuration
+		var config = {
+			"distribution": AssetLoader.DIST_EQUAL
+		}
+		AssetLoader.initialize(config)
+		
+		# Load a single asset
+		var request_id = AssetLoader.load(
+			"res://textures/player.png",
+			"Texture2D",
+			Thread.PRIORITY_NORMAL,
+			_on_asset_loaded
+		)
+		
+		func _on_asset_loaded(resource, path, status):
+			if status == OK:
+				sprite.texture = resource
+		[/codeblock]
+		The loader automatically manages worker threads based on system resources and can be configured for custom thread distribution across different asset types.
+	</description>
+	<tutorials></tutorials>
+	<members>
+		<member name="budgets" type="MemoryBudget" setter="" getter="get_budgets">
+			The [MemoryBudget] used by this asset loader to track and enforce memory budget limits.
+		</member>
+	</members>
+	<methods>
+		<method name="load">
+			<return type="int" />
+			<param index="0" name="path" type="String" />
+			<param index="1" name="type" type="StringName" />
+			<param index="2" name="priority" type="Thread.Priority" />
+			<param index="3" name="callback" type="Callable" />
+			<description>
+				Queues a resource for loading and returns a unique request ID.
+				The [param callback] is called when loading completes with signature: [code]callback(resource: Resource, path: String, status: int)[/code]. Status will be [constant OK] on success or an error code on failure.
+				The [param priority] determines loading order when multiple requests are queued. Higher priority assets load first.
+				Use [method get] with the returned ID to retrieve the loaded resource. [method status] to retreive the status of the resource. Or rely on the callback.
+			</description>
+		</method>
+		<method name="load_batch">
+			<return type="int" />
+			<param index="0" name="paths" type="String" />
+			<param index="1" name="type" type="StringName" />
+			<param index="2" name="priority" type="Thread.Priority" />
+			<param index="3" name="callback" type="Callable" />
+			<param index="4" name="batch_callback" type="Callable" />
+			<description>
+				Loads multiple resources as a batch and returns a unique batch ID.
+				The [param callback] is called when an individual asset completes loading with signature: [code]callback(resource: Resource, path: String, status: int)[/code]. Status will be [constant OK] on success or an error code on failure.
+				The [param batch_callback] is called when the entire batch completes loading with signature: [code]callback(resources: Array, status: int)[/code]. Status will be [constant OK] on success or an error code on failure.
+				Use [method get_batch] with the returned ID to retrieve all resources. [method progress_batch] to track completion percentage. [method status_batch] to get status. Or rely on the callback.
+			</description>
+		</method>
+		<method name="status">
+			<return type="int" enum="AssetLoader.RequestStatus" />
+			<param index="0" name="id" type="int" />
+			<description>
+				Returns the loading status of a request. See [enum RequestStatus] for possible values.
+			</description>
+		</method>
+		<method name="get">
+			<return type="Resource" />
+			<param index="0" name="id" type="int" />
+			<description>
+				Retrieves and removes a loaded resource from the cache. Returns [code]null[/code] if the resource wasn't loaded (yet).
+			</description>
+		</method>
+		<method name="cancel">
+			<return type="void" />
+			<param index="0" name="id" type="int" />
+			<description>
+				Cancels a pending load request. If the resource is already loading, it will finish but the callback will receive [constant ERR_SKIP].
+			</description>
+		</method>
+
+		<method name="progress_batch">
+			<return type="float"/>
+			<param index="0" name="id" type="int" />
+			<description>
+				Returns the completion progress of a batch. In a range of 0 to 1.
+			</description>
+		</method>
+		<method name="status_batch">
+			<return type="int" enum="AssetLoader.RequestStatus" />
+			<param index="0" name="id" type="int" />
+			<description>
+				Returns the loading status of a batch. See [enum RequestStatus] for possible values.
+			</description>
+		</method>
+		<method name="get_batch">
+			<return type="Array" />
+			<param index="0" name="id" type="int" />
+			<description>
+				Retrieves and removes the loaded resources from a batch from the cache. Inserts [code]null[/code] if the resource wasn't loaded (yet).
+			</description>
+		</method>
+		<method name="cancel_batch">
+			<return type="void" />
+			<param index="0" name="id" type="int" />
+			<description>
+				Cancels a pending batch. If the resources of the batch are already loading, it will finish but the callback will receive [constant ERR_SKIP].
+			</description>
+		</method>
+
+		<method name="initialize">
+			<return type="void" />
+			<param index="0" name="config" type="Dictionary" />
+			<description>
+				Initializes the loader with the specified configuration. Must be called before loading any assets.
+				Configuration options:
+				- [code]distribution[/code]: Thread distribution mode ([constant DIST_EQUAL] or [constant DIST_CUSTOM])
+				- [code]pools[/code]: Array of thread pool definitions when using [constant DIST_CUSTOM]
+				Example:
+				[codeblock]
+				var config = {
+					"distribution": AssetLoader.DIST_CUSTOM,
+					"pools": [
+						{"type": "Texture2D", "count": 2, "priority": Thread.PRIORITY_NORMAL},
+						{"type": "AudioStreamWAV", "count": 1, "priority": Thread.PRIORITY_LOW}
+					]
+				}
+				[/codeblock]
+			</description>
+		</method>
+	</methods>
+</class>

@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="MemoryBudget" inherits="RefCounted"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/godotengine/godot/master/doc/class.xsd">
+	<brief_description>
+		Tracks and enforces memory usage for loaded resources by type.
+	</brief_description>
+	<description>
+		MemoryBudget tracks the memory footprint of loaded resources and prevents the [class AssetLoader] from exceeding memory budget limits.
+		
+		The system works in two steps:
+		[b]1. Reservation step[/b] - Before loading, the budget estimates the memory size based on file size and checks if there is enough budget remaining. If adding the estimated size would exceed the budget, the request is denied.
+		[b]2. Tracking step[/b] - After loading, resources are tracked with their estimated sizes initially, then their actual memory usage is calculated over several frames to avoid lag as the size calculation quite heavy.
+		
+		Memory tracking:
+		- [method reserve_budget] - Called before loading to check if enough budget exists
+		- [method register_resource] - Called after loading to track the resource
+		- [method process_pending_resources] - Called each frame to calculate actual sizes
+		- [method release_reservation] - Called if loading fails or is cancelled
+		The system automatically cleans up entries that have been freed by Godot.
+
+		Example usage:
+		[codeblock]
+		# Set 512 MB limit for textures
+		AssetLoader.budgets.set_mb("Texture2D", 512)
+		
+		# Set 256 MB limit for audio
+		AssetLoader.budgets.set_mb("AudioStreamWAV", 256)
+		[/codeblock]
+	</description>
+	<tutorials></tutorials>
+	<methods>
+		<method name="set_mb">
+			<return type="void" />
+			<param index="0" name="type" type="StringName" />
+			<param index="1" name="mb" type="int" />
+			<description>
+				Sets the memory budget limit in megabytes for a specific resource type.
+			</description>
+		</method>
+	</methods>
+</class>

@@ -270,8 +270,8 @@ void AssetLoader::_bind_methods() {
 			&AssetLoader::get_singleton);
 	ClassDB::bind_method(D_METHOD("_worker_thread_func"), &AssetLoader::_worker_thread_func);
 	ClassDB::bind_method(D_METHOD("initialize", "config"), &AssetLoader::initialize);
-	ClassDB::bind_method(D_METHOD("load", "path", "callback", "priority", "type"), &AssetLoader::load);
-	ClassDB::bind_method(D_METHOD("load_batch", "paths", "callback", "batch_callback", "priority", "type"), &AssetLoader::load_batch);
+	ClassDB::bind_method(D_METHOD("load", "path", "type", "priority", "callback"), &AssetLoader::load);
+	ClassDB::bind_method(D_METHOD("load_batch", "paths", "type", "priority", "callback", "batch_callback"), &AssetLoader::load_batch);
 	ClassDB::bind_method(D_METHOD("status", "id"), &AssetLoader::status);
 	ClassDB::bind_method(D_METHOD("get", "id"), &AssetLoader::get);
 	ClassDB::bind_method(D_METHOD("get_batch", "id"), &AssetLoader::get_batch);
@@ -326,9 +326,10 @@ void AssetLoader::_worker_thread_func(const StringName &p_type) {
 
 		{
 			MutexLock lock(*_queue_mutex.ptr());
-			if (!_asset_type_queues[p_type].empty()) {
-				request = _asset_type_queues[p_type].top();
-				_asset_type_queues[p_type].pop();
+			auto it = _asset_type_queues.find(p_type);
+			if (it != _asset_type_queues.end() && !it->second.empty()) {
+				request = it->second.top();
+				it->second.pop();
 				has_request = true;
 			} else {
 				for (auto &load_queue : _asset_type_queues) {
@@ -435,13 +436,13 @@ void AssetLoader::_batch_item_load(Ref<Resource> p_resource, const String &p_pat
 	}
 
 	if (p_callback.is_valid()) {
-		p_callback.call_deferred(p_resource);
+		p_callback.call_deferred(p_resource, p_path, p_status);
 	}
 
 	if (batch_complete) {
 		if (batch_copy.callback.is_valid()) {
 			auto resources = get_batch(p_id);
-			batch_copy.callback.call_deferred(resources);
+			batch_copy.callback.call_deferred(resources, batch_copy.errors ? ERR_FILE_NOT_FOUND : OK);
 		}
 	}
 }

@@ -12,7 +12,6 @@ using namespace godot;
 
 void MemoryBudget::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_mb", "type", "mb"), &MemoryBudget::set_budget);
-	ClassDB::bind_method(D_METHOD("process_pending_resources"), &MemoryBudget::process_pending_resources);
 }
 
 MemoryBudget::MemoryBudget() {

@@ -28,7 +28,7 @@ func _ready():
 	if delete_button:
 		delete_button.pressed.connect(_on_delete_button_pressed)
 
-func test(resource: Resource):
+func test(resource: Resource, _path, _status):
 	if (!is_instance_valid(resource)):
 		return
 	var mesh = resource as Mesh
@@ -41,7 +41,7 @@ func test(resource: Resource):
 	add_child(mesh_instance)
 	index += 1
 
-func done_loading(_resources: Array):
+func done_loading(_resources, _status):
 	cancel = false
 	load_button.text = "Load"
 
