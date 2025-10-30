@@ -23,6 +23,7 @@ private:
 		ObjectID id;
 		StringName type;
 		String path;
+		// size in bytes
 		size_t size;
 		size_t estimated_size;
 		SizeState size_state;
@@ -31,8 +32,9 @@ private:
 	Ref<Mutex> _budget_mutex;
 	HashMap<uint64_t, ResourceEntry> _resources;
 
-	HashMap<String, size_t> _budgets;
-	HashMap<String, size_t> _sizes;
+	// asset type and size in bytes
+	HashMap<StringName, size_t> _budgets;
+	HashMap<StringName, size_t> _sizes;
 	HashMap<StringName, size_t> _estimated;
 
 	int _remove_counter = 0;

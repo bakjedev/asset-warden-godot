@@ -335,8 +335,9 @@ void AssetLoader::_worker_thread_func(const StringName &p_type) {
 		//step 2: get work
 		LoadRequest request;
 		bool has_request = false;
-		auto actual_type = p_type;
+		auto actual_type = p_type; // when stealing from other queues, asset type can be different than the type the thread was dedicated to.
 
+		// shortly lock mutex to access queues
 		{
 			MutexLock lock(*_queue_mutex.ptr());
 			// first try the dedicated queue
@@ -362,7 +363,7 @@ void AssetLoader::_worker_thread_func(const StringName &p_type) {
 			continue; // couldn't find any work (fake wakeup!?)
 		}
 
-		// step 3: check if cancelled
+		// step 3: check if cancelled (shortly lock mutex to access request statuses)
 		{
 			MutexLock lock(*_cache_mutex.ptr());
 			if (_request_status[request.id] == STATUS_CANCELLED) {
@@ -377,7 +378,7 @@ void AssetLoader::_worker_thread_func(const StringName &p_type) {
 
 		// step 4: check memory budget
 		if (!_memory_budget->reserve_budget(actual_type, request.path)) {
-			{
+			{ // shortly lock mutex to set status to ERROR
 				MutexLock lock(*_cache_mutex.ptr());
 				_request_status[request.id] = STATUS_ERROR;
 			}
@@ -393,6 +394,7 @@ void AssetLoader::_worker_thread_func(const StringName &p_type) {
 
 		// step 6: check cancellation again (might have been cancelled during load)
 		{
+			// lock mutex for checking and setting statuses and storing results.
 			MutexLock lock(*_cache_mutex.ptr());
 			if (_request_status[request.id] == STATUS_CANCELLED) {
 				_memory_budget->release_reservation(actual_type, request.path);
@@ -413,7 +415,7 @@ void AssetLoader::_worker_thread_func(const StringName &p_type) {
 			}
 		}
 
-		// notify user
+		// step 8: notify user
 		if (request.callback.is_valid()) {
 			request.callback.call_deferred(res, request.path, res.is_valid() ? OK : ERR_FILE_NOT_FOUND);
 		}

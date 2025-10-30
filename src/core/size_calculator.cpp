@@ -257,7 +257,7 @@ size_t SizeCalculator::calculate_resource(const Ref<Resource> &p_resource) {
 		return audio_stream_wav(Object::cast_to<AudioStreamWAV>(p_resource.ptr()));
 	}
 
-	return REFCOUNTED_SIZE + 256;
+	return estimate_resource(p_resource->get_path());
 }
 
 size_t SizeCalculator::estimate_resource(const String &p_path) {
