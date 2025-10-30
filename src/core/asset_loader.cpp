@@ -34,14 +34,23 @@ void AssetLoader::initialize(const Dictionary &p_config) {
 
 	_setup_process_loop();
 
-	auto core_count = OS::get_singleton()->get_processor_count();
-	auto available_cores = Math::max(1, core_count - 2);
-
 	if (p_config.has("distribution")) {
 		auto distribution = static_cast<ThreadDistribution>(static_cast<int>(p_config["distribution"]));
 
 		switch (distribution) {
 			case DIST_EQUAL: {
+				auto core_count = OS::get_singleton()->get_processor_count();
+				auto available_cores = 1;
+				if (core_count <= 2) {
+					available_cores = 1;
+				} else if (core_count <= 4) {
+					available_cores = core_count - 1;
+				} else if (core_count <= 8) {
+					available_cores = core_count - 2;
+				} else {
+					available_cores = core_count - 3;
+				}
+
 				for (int i = 0; i < available_cores; ++i) {
 					_create_worker_thread("", Thread::PRIORITY_NORMAL);
 				}
@@ -93,7 +102,11 @@ void AssetLoader::_shutdown() {
 }
 
 uint64_t AssetLoader::load(const String &p_path, const StringName &p_type, Thread::Priority p_priority, const Callable &p_callback) {
-	LoadRequest request{ _next_request_id++, p_path, p_priority, p_type, p_callback, false };
+	auto id = _next_request_id++;
+
+	auto callback = callable_mp(this, &AssetLoader::_request_item_load).bind(id, p_callback);
+
+	LoadRequest request{ id, p_path, p_priority, p_type, p_callback };
 
 	{
 		MutexLock lock(*_queue_mutex.ptr());
@@ -120,16 +133,14 @@ uint64_t AssetLoader::load_batch(const Array &p_paths, const StringName &p_type,
 		for (int i = 0; i < p_paths.size(); ++i) {
 			String path = p_paths[i];
 
-			auto batch_callback = callable_mp(this, &AssetLoader::_batch_item_load)
-										  .bind(batch_id, p_callback);
+			auto batch_callback = callable_mp(this, &AssetLoader::_batch_item_load).bind(batch_id, p_callback);
 
 			LoadRequest request{
 				_next_request_id++,
 				path,
 				p_priority,
 				p_type,
-				batch_callback,
-				true
+				batch_callback
 			};
 
 			_asset_type_queues[p_type].push(request);
@@ -314,24 +325,27 @@ void AssetLoader::_worker_thread_func(const StringName &p_type) {
 	UtilityFunctions::print("Starting thread");
 
 	while (!_should_exit) {
-		_semaphore->wait();
+		// step 1: sleeping
+		_semaphore->wait(); // sleeps until semaphore post (work available)
 
 		if (_should_exit) {
-			break;
+			break; // shutdown
 		}
 
+		//step 2: get work
 		LoadRequest request;
 		bool has_request = false;
 		auto actual_type = p_type;
 
 		{
 			MutexLock lock(*_queue_mutex.ptr());
+			// first try the dedicated queue
 			auto it = _asset_type_queues.find(p_type);
 			if (it != _asset_type_queues.end() && !it->second.empty()) {
 				request = it->second.top();
 				it->second.pop();
 				has_request = true;
-			} else {
+			} else { // otherwise try and steal work from other queues
 				for (auto &load_queue : _asset_type_queues) {
 					if (!load_queue.second.empty()) {
 						request = load_queue.second.top();
@@ -344,74 +358,82 @@ void AssetLoader::_worker_thread_func(const StringName &p_type) {
 			}
 		}
 
-		if (has_request) {
+		if (!has_request) {
+			continue; // couldn't find any work (fake wakeup!?)
+		}
+
+		// step 3: check if cancelled
+		{
+			MutexLock lock(*_cache_mutex.ptr());
+			if (_request_status[request.id] == STATUS_CANCELLED) {
+				// don't waste time loading cancelled requests
+				if (request.callback.is_valid()) {
+					request.callback.call_deferred(Ref<Resource>(), request.path, ERR_SKIP);
+				}
+				continue;
+			}
+			_request_status[request.id] = STATUS_LOADING;
+		}
+
+		// step 4: check memory budget
+		if (!_memory_budget->reserve_budget(actual_type, request.path)) {
 			{
 				MutexLock lock(*_cache_mutex.ptr());
-				const auto &status = _request_status[request.id];
-				if (status == STATUS_CANCELLED) {
-					if (request.callback.is_valid()) {
-						request.callback.call_deferred(Ref<Resource>(), request.path, ERR_SKIP);
-					}
-					if (!request.part_of_batch) {
-						_request_status.erase(request.id);
-					}
-					continue;
-				}
-				_request_status[request.id] = STATUS_LOADING;
+				_request_status[request.id] = STATUS_ERROR;
 			}
 
-			if (!_memory_budget->reserve_budget(actual_type, request.path)) {
-				{
-					MutexLock lock(*_cache_mutex.ptr());
-					_request_status[request.id] = STATUS_ERROR;
-				}
+			if (request.callback.is_valid()) {
+				request.callback.call_deferred(Ref<Resource>(), request.path, ERR_OUT_OF_MEMORY);
+			}
+			continue;
+		}
 
+		// step 5: loading the resource (important: no mutex lock, this takes long)
+		auto res = ResourceLoader::get_singleton()->load(request.path, request.type);
+
+		// step 6: check cancellation again (might have been cancelled during load)
+		{
+			MutexLock lock(*_cache_mutex.ptr());
+			if (_request_status[request.id] == STATUS_CANCELLED) {
+				_memory_budget->release_reservation(actual_type, request.path);
 				if (request.callback.is_valid()) {
-					request.callback.call_deferred(Ref<Resource>(), request.path, ERR_OUT_OF_MEMORY);
-				}
-
-				if (!request.part_of_batch) {
-					_request_status.erase(request.id);
+					request.callback.call_deferred(Ref<Resource>(), request.path, ERR_SKIP);
 				}
 				continue;
 			}
 
-			auto res = ResourceLoader::get_singleton()->load(request.path, request.type);
-
-			{
-				MutexLock lock(*_cache_mutex.ptr());
-				if (_request_status[request.id] == STATUS_CANCELLED) { // check again because it might've been cancelled during loading
-					_memory_budget->release_reservation(actual_type, request.path);
-					if (request.callback.is_valid()) {
-						request.callback.call_deferred(Ref<Resource>(), request.path, ERR_SKIP);
-					}
-					if (!request.part_of_batch) {
-						_request_status.erase(request.id);
-					}
-					continue;
-				}
-
-				if (res.is_valid()) {
-					_completed_loads[request.id] = res;
-					_request_status[request.id] = STATUS_LOADED;
-					_memory_budget->register_resource(res);
-				} else {
-					_request_status[request.id] = STATUS_ERROR;
-					_memory_budget->release_reservation(actual_type, request.path);
-				}
+			// step 7: store the result
+			if (res.is_valid()) {
+				_completed_loads[request.id] = res;
+				_request_status[request.id] = STATUS_LOADED;
+				_memory_budget->register_resource(res);
+			} else {
+				_request_status[request.id] = STATUS_ERROR;
+				_memory_budget->release_reservation(actual_type, request.path);
 			}
+		}
 
-			if (request.callback.is_valid()) {
-				request.callback.call_deferred(res, request.path, res.is_valid() ? OK : ERR_FILE_NOT_FOUND);
-			}
+		// notify user
+		if (request.callback.is_valid()) {
+			request.callback.call_deferred(res, request.path, res.is_valid() ? OK : ERR_FILE_NOT_FOUND);
 		}
 	}
 
 	UtilityFunctions::print("Ending thread");
 }
 
-void AssetLoader::_batch_item_load(Ref<Resource> p_resource, const String &p_path,
-		int p_status, uint64_t p_id, const Callable &p_callback) {
+void AssetLoader::_request_item_load(Ref<Resource> p_resource, const String &p_path, int p_status, uint64_t p_id, const Callable &p_callback) {
+	{
+		MutexLock lock(*_cache_mutex.ptr());
+		_request_status.erase(p_id);
+	}
+
+	if (p_callback.is_valid()) {
+		p_callback.call_deferred(p_resource, p_path, p_status);
+	}
+}
+
+void AssetLoader::_batch_item_load(Ref<Resource> p_resource, const String &p_path, int p_status, uint64_t p_id, const Callable &p_callback) {
 	bool batch_complete = false;
 	Batch batch_copy;
 

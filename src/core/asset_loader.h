@@ -33,7 +33,6 @@ public:
 		Thread::Priority priority;
 		StringName type;
 		Callable callback;
-		bool part_of_batch;
 
 		bool operator<(const LoadRequest &other) const {
 			return (priority > other.priority);
@@ -113,8 +112,8 @@ private:
 	void _shutdown();
 
 	void _worker_thread_func(const StringName &p_type);
-	void _batch_item_load(Ref<Resource> p_resource, const String &p_path,
-			int p_status, uint64_t p_id, const Callable &p_callback);
+	void _request_item_load(Ref<Resource> p_resource, const String &p_path, int p_status, uint64_t p_id, const Callable &p_callback);
+	void _batch_item_load(Ref<Resource> p_resource, const String &p_path, int p_status, uint64_t p_id, const Callable &p_callback);
 
 	void _create_worker_thread(const StringName &p_type, Thread::Priority p_priority);
 
