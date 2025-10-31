@@ -4,6 +4,7 @@
 
 using namespace godot;
 
+// this function was ai generated
 float AssetWardenGraph::grid_interval(float p_range) const {
 	float interval = p_range / 10.0f;
 
@@ -48,6 +49,7 @@ AssetWardenGraph::~AssetWardenGraph() {
 }
 
 void AssetWardenGraph::_draw() {
+	// make sure it can't draw outside panel
 	draw_set_transform_matrix(Transform2D());
 	RenderingServer::get_singleton()->canvas_item_set_clip(get_canvas_item(), true);
 
@@ -60,6 +62,7 @@ void AssetWardenGraph::_draw() {
 	Color grid_color(0.3f, 0.3f, 0.3f, 0.5f);
 	Color axis_color(0.5f, 0.5f, 0.5f, 1.0f);
 
+	// these loops were ai generated
 	for (float x = std::ceil(_x_min / x_interval) * x_interval; x <= _x_max; x += x_interval) {
 		Vector2 screen_pos = data_to_screen(Vector2(x, _y_min));
 		float screen_x = screen_pos.x;

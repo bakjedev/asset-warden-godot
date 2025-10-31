@@ -1,6 +1,8 @@
 @tool
 extends MeshInstance3D
 
+# IMPORTANT, THIS WAS AI GENERATED. (most of it)
+
 @export var plane_size: Vector2 = Vector2(10, 10)
 @export var subdivisions: Vector2i = Vector2i(50, 50)
 
