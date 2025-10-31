@@ -34,40 +34,65 @@ void AssetLoader::initialize(const Dictionary &p_config) {
 
 	_setup_process_loop();
 
+	auto distribution = DIST_EQUAL;
 	if (p_config.has("distribution")) {
-		auto distribution = static_cast<ThreadDistribution>(static_cast<int>(p_config["distribution"]));
+		distribution = static_cast<ThreadDistribution>(static_cast<int>(p_config["distribution"]));
+	}
 
-		switch (distribution) {
-			case DIST_EQUAL: {
-				auto core_count = OS::get_singleton()->get_processor_count();
-				auto available_cores = 1;
-				if (core_count <= 2) {
-					available_cores = 1;
-				} else if (core_count <= 4) {
-					available_cores = core_count - 1;
-				} else if (core_count <= 8) {
-					available_cores = core_count - 2;
-				} else {
-					available_cores = core_count - 3;
-				}
+	auto core_count = OS::get_singleton()->get_processor_count();
+	auto available_cores = 1;
+	if (core_count <= 2) {
+		available_cores = 1;
+	} else if (core_count <= 4) {
+		available_cores = core_count - 1;
+	} else if (core_count <= 8) {
+		available_cores = core_count - 2;
+	} else {
+		available_cores = core_count - 4;
+	}
 
-				for (int i = 0; i < available_cores; ++i) {
-					_create_worker_thread("", Thread::PRIORITY_NORMAL);
-				}
-				break;
+	switch (distribution) {
+		case DIST_EQUAL: {
+			auto usage = USAGE_MEDIUM;
+			if (p_config.has("usage")) {
+				usage = static_cast<ThreadUsage>(static_cast<int>(p_config["usage"]));
 			}
-			case DIST_CUSTOM: {
-				if (p_config.has("pools")) {
-					Array pools = p_config["pools"];
-					for (int i = 0; i < pools.size(); ++i) {
-						Dictionary pool = pools[i];
-						for (int j = 0; j < static_cast<int>(pool["count"]); ++j) {
-							_create_worker_thread(pool["type"], static_cast<Thread::Priority>(static_cast<int>(pool["priority"])));
-						}
+			int thread_count = available_cores;
+
+			switch (usage) {
+				case USAGE_LOW:
+					thread_count = 2;
+					if (thread_count > available_cores) {
+						thread_count = available_cores;
+					}
+					break;
+				case USAGE_MEDIUM:
+					thread_count = available_cores / 2;
+					if (thread_count < 1) {
+						thread_count = 1;
+					}
+					break;
+				case USAGE_HIGH:
+					thread_count = available_cores;
+					break;
+			}
+
+			for (int i = 0; i < thread_count; ++i) {
+				_create_worker_thread("", Thread::PRIORITY_NORMAL);
+			}
+			break;
+		}
+		case DIST_CUSTOM: {
+			if (p_config.has("pools")) {
+				Array pools = p_config["pools"];
+				for (int i = 0; i < pools.size(); ++i) {
+					Dictionary pool = pools[i];
+					for (int j = 0; j < static_cast<int>(pool["count"]); ++j) {
+						_create_worker_thread(pool["type"], static_cast<Thread::Priority>(static_cast<int>(pool["priority"])));
 					}
 				}
-				break;
 			}
+			break;
 		}
 	}
 }
@@ -297,6 +322,10 @@ void AssetLoader::_bind_methods() {
 
 	BIND_ENUM_CONSTANT(DIST_EQUAL);
 	BIND_ENUM_CONSTANT(DIST_CUSTOM);
+
+	BIND_ENUM_CONSTANT(USAGE_LOW);
+	BIND_ENUM_CONSTANT(USAGE_MEDIUM);
+	BIND_ENUM_CONSTANT(USAGE_HIGH);
 
 	BIND_ENUM_CONSTANT(STATUS_NONE);
 	BIND_ENUM_CONSTANT(STATUS_LOADING);

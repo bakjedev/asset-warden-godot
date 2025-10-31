@@ -53,6 +53,12 @@ public:
 		DIST_CUSTOM
 	};
 
+	enum ThreadUsage {
+		USAGE_LOW,
+		USAGE_MEDIUM,
+		USAGE_HIGH
+	};
+
 	enum RequestStatus {
 		STATUS_NONE,
 		STATUS_LOADING,
@@ -137,4 +143,5 @@ public:
 } // namespace godot
 
 VARIANT_ENUM_CAST(godot::AssetLoader::ThreadDistribution);
+VARIANT_ENUM_CAST(godot::AssetLoader::ThreadUsage);
 VARIANT_ENUM_CAST(godot::AssetLoader::RequestStatus);

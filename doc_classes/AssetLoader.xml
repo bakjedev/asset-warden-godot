@@ -128,6 +128,7 @@
 				Initializes the loader with the specified configuration. Must be called before loading any assets.
 				Configuration options:
 				- [code]distribution[/code]: Thread distribution mode ([constant DIST_EQUAL] or [constant DIST_CUSTOM])
+				- [code]usage[/code]: Thread usage mode when using [constant DIST_EQUAL] ([constant USAGE_LOW], [constant USAGE_MEDIUM], or [constant USAGE_HIGH])
 				- [code]pools[/code]: Array of thread pool definitions when using [constant DIST_CUSTOM]
 				Example:
 				[codeblock]
